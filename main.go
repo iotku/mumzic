@@ -58,6 +58,7 @@ func main() {
 		},
 	})
 }
+
 func playFile(client *gumble.Client, path string) {
 	if stream != nil {
 		stream.Stop()
@@ -92,6 +93,11 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 		return
 	}
 
+	if isCommand(message, cmdPrefix+"search ") {
+		SearchALL(songdb, lazyRemovePrefix(message, "search "), client)
+		return
+	}
+
 	// If stream object doesn't exist yet, don't do anything to avoid dereference
 	if stream == nil {
 		fmt.Println("Stream is null")
@@ -122,7 +128,7 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 	// Set volume
 	// At some point consider switching to percentage based system
 	if isCommand(message, cmdPrefix+"volume ") {
-		message = "." + lazyRemovePrefix(message, "!volume")
+		message = "." + lazyRemovePrefix(message, "!volume") // TODO: Check volume prefix removal (Probably not ! )
 		value, err := strconv.ParseFloat(message, 32)
 
 		if err == nil {
@@ -185,4 +191,34 @@ func getMaxID(database string) int {
 	err = db.QueryRow("SELECT id FROM music WHERE ID = (SELECT MAX(ID) FROM music);").Scan(&count)
 	checkErr(err)
 	return count
+}
+
+func SearchALL(songdb, Query string, client *gumble.Client) {
+	Query = fmt.Sprintf("%%%s%%", Query)
+	rows := makeDbQuery(songdb, "SELECT * FROM music where (artist || \" \" || title)  LIKE ? LIMIT 25", Query)
+	defer rows.Close()
+
+	var id int
+	var artist, album, title, path string
+
+	for rows.Next() {
+		err := rows.Scan(&id, &artist, &album, &title, &path)
+		checkErr(err)
+		client.Self.Channel.Send(fmt.Sprintf("#%d | %s - %s (%s)\n", id, artist, title, album), false)
+	}
+
+	return
+}
+
+// Helper Functions
+func makeDbQuery(songdb, query string, args ...interface{}) *sql.Rows {
+	db, err := sql.Open("sqlite3", songdb)
+	checkErr(err)
+	defer db.Close()
+
+	rows, err := db.Query(query, args...)
+	checkErr(err)
+
+	// Don't forget to close in function where called.
+	return rows
 }
