@@ -17,6 +17,8 @@ import (
 )
 
 var stream *gumbleffmpeg.Stream
+
+// Eventually allow these to be grabbed from configuration file
 var volumeLevel float32
 var cmdPrefix = "!"
 
@@ -135,6 +137,7 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 		return
 	}
 }
+
 func checkErr(err error) {
 	if err != nil {
 		panic(err)
@@ -181,6 +184,5 @@ func getMaxID(database string) int {
 	var count int
 	err = db.QueryRow("SELECT id FROM music WHERE ID = (SELECT MAX(ID) FROM music);").Scan(&count)
 	checkErr(err)
-	err = db.QueryRow("SELECT COUNT(*) FROM music").Scan(&count)
 	return count
 }
