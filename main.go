@@ -18,6 +18,7 @@ import (
 
 var stream *gumbleffmpeg.Stream
 var volumeLevel float32
+var cmdPrefix = "!"
 
 func main() {
 	files := make(map[string]string)
@@ -77,13 +78,13 @@ func playID(songdb string, client *gumble.Client, id, maxDBID int) string {
 }
 
 func playbackControls(client *gumble.Client, message string, songdb string, maxDBID int) {
-	if isCommand(message, "!play ") {
+	if isCommand(message, cmdPrefix+"play ") {
 		id, _ := strconv.Atoi(lazyRemovePrefix(message, "play "))
 		playID(songdb, client, id, maxDBID)
 		return
 	}
 
-	if isCommand(message, "!rand") {
+	if isCommand(message, cmdPrefix+"rand") {
 		id := rand.Intn(maxDBID)
 		playID(songdb, client, id, maxDBID)
 		return
@@ -96,13 +97,13 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 	}
 
 	// Start stream, resumes .Pause()
-	if isCommand(message, "!play") {
+	if isCommand(message, cmdPrefix+"play") {
 		stream.Play()
 		return
 	}
 
 	// Stop Playback
-	if isCommand(message, "!stop") {
+	if isCommand(message, cmdPrefix+"stop") {
 		err := stream.Stop()
 		if err != nil {
 			fmt.Println(err.Error())
@@ -111,14 +112,14 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 	}
 
 	// Pause playback, maybe resumed with .Play()
-	if isCommand(message, "!pause") {
+	if isCommand(message, cmdPrefix+"pause") {
 		stream.Pause()
 		return
 	}
 
 	// Set volume
 	// At some point consider switching to percentage based system
-	if isCommand(message, "!volume ") {
+	if isCommand(message, cmdPrefix+"volume ") {
 		message = "." + lazyRemovePrefix(message, "!volume")
 		value, err := strconv.ParseFloat(message, 32)
 
@@ -130,7 +131,7 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 	}
 
 	// Skip to next track in playlist
-	if isCommand(message, "!skip") {
+	if isCommand(message, cmdPrefix+"skip") {
 		return
 	}
 }
@@ -146,7 +147,7 @@ func isCommand(message, command string) bool {
 
 // Remove prefix from command for single argument (I.E. "!play 22" -> "22")
 func lazyRemovePrefix(message, prefix string) string {
-	char := "!"
+	char := cmdPrefix
 	return strings.TrimSpace(message[len(char+prefix):len(message)])
 }
 
