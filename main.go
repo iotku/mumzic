@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 )
+
 var stream *gumbleffmpeg.Stream
 var volumeLevel float32
 
@@ -53,23 +54,28 @@ func main() {
 		},
 	})
 }
+func playFile(client *gumble.Client, path string) {
+	if stream != nil {
+		stream.Stop()
+	}
 
-func playbackControls (client *gumble.Client, message string, songdb string, maxDBID int) {
+	stream = gumbleffmpeg.New(client, gumbleffmpeg.SourceFile(path))
+	stream.Volume = volumeLevel
+	if err := stream.Play(); err != nil {
+		fmt.Printf("%s\n", err)
+	} else {
+		fmt.Printf("Playing %s\n", path)
+	}
+}
+
+func playbackControls(client *gumble.Client, message string, songdb string, maxDBID int) {
 	if isCommand(message, "!play ") {
-		if stream != nil {
-			stream.Stop()
-		}
-		value := lazyRemovePrefix(message, "play ")
-		id, _ := strconv.Atoi(value)
-		path, _ := GetTrackById(songdb, id, maxDBID)
-		fmt.Println(path)
-		stream = gumbleffmpeg.New(client, gumbleffmpeg.SourceFile(path))
-		stream.Volume = volumeLevel
-		if err := stream.Play(); err != nil {
-			fmt.Printf("%s\n", err)
-		} else {
-			fmt.Printf("Playing %s\n", path)
-		}
+		id, _ := strconv.Atoi(lazyRemovePrefix(message, "play "))
+		path, human := GetTrackById(songdb, id, maxDBID)
+		fmt.Println("Now Playing: " + human)
+		client.Self.Channel.Send(human, false)
+		playFile(client, path)
+
 		return
 	}
 
@@ -95,7 +101,7 @@ func playbackControls (client *gumble.Client, message string, songdb string, max
 	}
 
 	// Pause playback, maybe resumed with .Play()
-	if isCommand(message, "!pause")  {
+	if isCommand(message, "!pause") {
 		stream.Pause()
 		return
 	}
@@ -124,15 +130,17 @@ func checkErr(err error) {
 	}
 }
 
-func isCommand (message, command string) bool {
+func isCommand(message, command string) bool {
 	return strings.HasPrefix(message, command)
 }
 
+// Remove prefix from command for single argument (I.E. "!play 22" -> "22")
 func lazyRemovePrefix(message, prefix string) string {
 	char := "!"
 	return strings.TrimSpace(message[len(char+prefix):len(message)])
 }
 
+// Query SQLite database to get filepath related to ID
 func GetTrackById(songdb string, trackID, maxDBID int) (filepath, humanout string) {
 	if trackID > maxDBID {
 		return "", ""
@@ -153,6 +161,8 @@ func GetTrackById(songdb string, trackID, maxDBID int) (filepath, humanout strin
 	return path, humanout
 }
 
+// Query SQLite database to count maximum amount of rows, as to not point to non existant ID
+// TODO: Perhaps catch error instead?
 func getMaxID(database string) int {
 	db, err := sql.Open("sqlite3", database)
 	defer db.Close()
@@ -163,4 +173,3 @@ func getMaxID(database string) int {
 	err = db.QueryRow("SELECT COUNT(*) FROM music").Scan(&count)
 	return count
 }
-
