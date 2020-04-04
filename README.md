@@ -12,3 +12,6 @@ WIP
 * ✅ Volume Control
 * ❌Playlist / Autoplay
 * ❌Search
+
+## Known Mumble Limitatons (Not my fault, for once.)
+* No stereo audio (See https://github.com/mumble-voip/mumble/issues/2829)
