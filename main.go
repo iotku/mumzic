@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -74,6 +75,40 @@ func playFile(client *gumble.Client, path string) {
 	}
 }
 
+func isWhiteListedUrl(url string) bool {
+	whiteListedURLS := []string{"https://www.youtube.com/", "https://youtu.be/", "https://soundcloud.com/"}
+	for i := range whiteListedURLS {
+		if strings.HasPrefix(url, whiteListedURLS[i]) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Play youtube video
+func playYT(client *gumble.Client, url string) {
+	removeHtmlTags := regexp.MustCompile("<[^>]*>")
+	url = removeHtmlTags.ReplaceAllString(url, "")
+	if isWhiteListedUrl(url) == false {
+		client.Self.Channel.Send("URL Doesn't meet whitelist, sorry.", false)
+		return
+	}
+
+	if stream != nil {
+		stream.Stop()
+	}
+
+	stream = gumbleffmpeg.New(client, gumbleffmpeg.SourceExec("youtube-dl", "-f", "bestaudio", "--no-playlist", "-q", "-o", "-", url))
+	stream.Volume = volumeLevel
+
+	if err := stream.Play(); err != nil {
+		fmt.Printf("%s\n", err)
+	} else {
+		fmt.Printf("Playing %s\n", url)
+	}
+
+}
 func playID(songdb string, client *gumble.Client, id, maxDBID int) string {
 	path, human := GetTrackById(songdb, id, maxDBID)
 	client.Self.Channel.Send("Now Playing: "+human, false)
@@ -85,6 +120,12 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 	if isCommand(message, cmdPrefix+"play ") {
 		id, _ := strconv.Atoi(lazyRemovePrefix(message, "play "))
 		playID(songdb, client, id, maxDBID)
+		return
+	}
+
+	if isCommand(message, cmdPrefix+"yt ") {
+		url := lazyRemovePrefix(message, "yt ")
+		playYT(client, url)
 		return
 	}
 
@@ -218,7 +259,8 @@ func makeDbQuery(songdb, query string, args ...interface{}) *sql.Rows {
 	db, err := sql.Open("sqlite3", songdb)
 	checkErr(err)
 	defer db.Close()
-
+	fmt.Println(query)
+	fmt.Println(args)
 	rows, err := db.Query(query, args...)
 	checkErr(err)
 

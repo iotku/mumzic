@@ -95,7 +95,6 @@ func InitDB(dbfile string) {
 	checkErr(err)
 
 	ddl := `
-	       PRAGMA automatic_index = ON;
 	       PRAGMA cache_size = 32768;
 	       PRAGMA cache_spill = OFF;
 	       PRAGMA foreign_keys = ON;
@@ -109,16 +108,7 @@ func InitDB(dbfile string) {
 	       PRAGMA journal_mode = OFF;
 	       PRAGMA wal_autocheckpoint = 16384;
 
-	       CREATE TABLE IF NOT EXISTS "music" (
-	           "id" INTEGER NOT NULL,
-	           "artist" TEXT NOT NULL,
-	           "album" TEXT NOT NULL,
-	           "title" TEXT NOT NULL,
-	           "path" TEXT NOT NULL
-	       );
-
-	       CREATE UNIQUE INDEX IF NOT EXISTS "id" ON "music" ("id");
-	       CREATE UNIQUE INDEX IF NOT EXISTS "path" ON "music" ("path");
+	       CREATE VIRTUAL TABLE "music" USING fts5("id", "artist", "album", "title", "path");
 	   `
 
 	_, err = db.Exec(ddl)
