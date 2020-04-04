@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var stream *gumbleffmpeg.Stream
@@ -88,7 +89,9 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 	}
 
 	if isCommand(message, cmdPrefix+"rand") {
-		id := rand.Intn(maxDBID)
+		seed := rand.NewSource(time.Now().UnixNano())
+		randsrc := rand.New(seed)
+		id := randsrc.Intn(maxDBID)
 		playID(songdb, client, id, maxDBID)
 		return
 	}
