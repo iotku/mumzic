@@ -22,7 +22,6 @@ var removednum = 0
 var db *sql.DB
 var txg *sql.Tx
 
-
 func main() {
 	flag.Parse()
 	root := flag.Arg(0)

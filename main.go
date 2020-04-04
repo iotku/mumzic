@@ -9,6 +9,7 @@ import (
 	"layeh.com/gumble/gumbleffmpeg"
 	"layeh.com/gumble/gumbleutil"
 	_ "layeh.com/gumble/opus"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -68,14 +69,23 @@ func playFile(client *gumble.Client, path string) {
 	}
 }
 
+func playID(songdb string, client *gumble.Client, id, maxDBID int) string {
+	path, human := GetTrackById(songdb, id, maxDBID)
+	client.Self.Channel.Send("Now Playing: "+human, false)
+	playFile(client, path)
+	return human
+}
+
 func playbackControls(client *gumble.Client, message string, songdb string, maxDBID int) {
 	if isCommand(message, "!play ") {
 		id, _ := strconv.Atoi(lazyRemovePrefix(message, "play "))
-		path, human := GetTrackById(songdb, id, maxDBID)
-		fmt.Println("Now Playing: " + human)
-		client.Self.Channel.Send(human, false)
-		playFile(client, path)
+		playID(songdb, client, id, maxDBID)
+		return
+	}
 
+	if isCommand(message, "!rand") {
+		id := rand.Intn(maxDBID)
+		playID(songdb, client, id, maxDBID)
 		return
 	}
 
