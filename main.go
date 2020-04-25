@@ -91,7 +91,7 @@ func playYT(client *gumble.Client, url string) {
 	removeHtmlTags := regexp.MustCompile("<[^>]*>")
 	url = removeHtmlTags.ReplaceAllString(url, "")
 	if isWhiteListedUrl(url) == false {
-		client.Self.Channel.Send("URL Doesn't meet whitelist, sorry.", false)
+		chanMsg(client, "URL Doesn't meet whitelist, sorry.")
 		return
 	}
 
@@ -99,7 +99,7 @@ func playYT(client *gumble.Client, url string) {
 		stream.Stop()
 	}
 
-	stream = gumbleffmpeg.New(client, gumbleffmpeg.SourceExec("youtube-dl", "-f", "bestaudio", "--no-playlist", "-q", "-o", "-", url))
+	stream = gumbleffmpeg.New(client, gumbleffmpeg.SourceExec("youtube-dl", "-f", "bestaudio", "-q", "-o", "-", url))
 	stream.Volume = volumeLevel
 
 	if err := stream.Play(); err != nil {
@@ -111,10 +111,13 @@ func playYT(client *gumble.Client, url string) {
 }
 func playID(songdb string, client *gumble.Client, id, maxDBID int) string {
 	path, human := GetTrackById(songdb, id, maxDBID)
-	client.Self.Channel.Send("Now Playing: "+human, false)
+	chanMsg(client, "Now Playing: "+human)
 	playFile(client, path)
 	return human
 }
+
+// Sends Message to current mumble channel
+func chanMsg(client *gumble.Client, msg string) { client.Self.Channel.Send(msg, false) }
 
 func playbackControls(client *gumble.Client, message string, songdb string, maxDBID int) {
 	if isCommand(message, cmdPrefix+"play ") {
@@ -172,7 +175,7 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 	// Set volume
 	// At some point consider switching to percentage based system
 	if isCommand(message, cmdPrefix+"volume ") {
-		message = "." + lazyRemovePrefix(message, "!volume") // TODO: Check volume prefix removal (Probably not ! )
+		message = "." + lazyRemovePrefix(message, "volume") // TODO: Check volume prefix removal (Probably not ! )
 		value, err := strconv.ParseFloat(message, 32)
 
 		if err == nil {
@@ -180,6 +183,12 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 			volumeLevel = float32(value)
 			stream.Volume = float32(value)
 		}
+	}
+
+	// Send current volume to channel
+	if isCommand(message, cmdPrefix+"volume") {
+		chanMsg(client, "Current Volume: "+fmt.Sprintf("%f", stream.Volume))
+		return
 	}
 
 	// Skip to next track in playlist
@@ -248,7 +257,7 @@ func SearchALL(songdb, Query string, client *gumble.Client) {
 	for rows.Next() {
 		err := rows.Scan(&id, &artist, &album, &title, &path)
 		checkErr(err)
-		client.Self.Channel.Send(fmt.Sprintf("#%d | %s - %s (%s)\n", id, artist, title, album), false)
+		chanMsg(client, fmt.Sprintf("#%d | %s - %s (%s)\n", id, artist, title, album))
 	}
 
 	return
