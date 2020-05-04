@@ -117,12 +117,6 @@ func playYT(url string, client *gumble.Client) {
 	}
 
 }
-func playID(id int, client *gumble.Client) string {
-	path, human := GetTrackById(songdb, id)
-	chanMsg(client, "Now Playing: "+human)
-	playFile(path, client)
-	return human
-}
 
 // Sends Message to current mumble channel
 func chanMsg(client *gumble.Client, msg string) { client.Self.Channel.Send(msg, false) }
@@ -310,12 +304,6 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 		return
 	}
 
-	// Pause playback, maybe resumed with .Play()
-	if isCommand(message, cmdPrefix+"pause") {
-		stream.Pause()
-		return
-	}
-
 	// Set volume
 	// At some point consider switching to percentage based system
 	if isCommand(message, cmdPrefix+"vol ") {
@@ -388,7 +376,7 @@ func GetTrackById(songdb string, trackID int) (filepath, humanout string) {
 	return path, humanout
 }
 
-// Query SQLite database to count maximum amount of rows, as to not point to non existant ID
+// Query SQLite database to count maximum amount of rows, as to not point to non existent ID
 // TODO: Perhaps catch error instead?
 func getMaxID(database string) int {
 	db, err := sql.Open("sqlite3", database)
