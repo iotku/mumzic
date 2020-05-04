@@ -5,12 +5,12 @@ WIP
 ## Progress
 ### Sources
 * ✅ Local Files (Paths stored in sqlite database)
-* ❌Youtube / Soundcloud / etc
+* ✅Youtube / Soundcloud / etc
 
 ### Features
 * ✅ Playback Control
 * ✅ Volume Control
-* ❌Playlist / Autoplay
+* ✅Playlist / Autoplay
 * ❌Search
 
 ## Known Mumble Limitatons (Not my fault, for once.)
