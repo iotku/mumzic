@@ -23,6 +23,8 @@ var songlist = make([]string, 0)
 var metalist = make([]string, 0)
 var currentsong = 0
 var doNext = "stop" // stop, next, skip [int]
+var isWaiting bool
+var isPlaying bool
 
 // Eventually allow these to be grabbed from configuration file
 var volumeLevel float32
@@ -121,20 +123,30 @@ func playID(id int, client *gumble.Client) string {
 // Sends Message to current mumble channel
 func chanMsg(client *gumble.Client, msg string) { client.Self.Channel.Send(msg, false) }
 
-func addToQueue(client *gumble.Client, id string) bool {
+func queueYT(url, human string) string {
+	// TODO Check with API if video is valid for youtube links
+	songlist = append(songlist, url)
+	metalist = append(metalist, human)
+	return human
+}
+
+func addToQueue(client *gumble.Client, path string) bool {
 	// For YTDL URLS
-	if strings.HasPrefix(id, "http") && isWhiteListedUrl(id) == true {
+	removeHtmlTags := regexp.MustCompile("<[^>]*>")
+	path = removeHtmlTags.ReplaceAllString(path, "")
+	if strings.HasPrefix(path, "http") && isWhiteListedUrl(path) == true {
 		// add to playlist
-		chanMsg(client, "Added: "+id)
+		queueYT(path, path)
+		chanMsg(client, "Added: "+path)
 		return true
-	} else if strings.HasPrefix(id, "http") == true {
+	} else if strings.HasPrefix(path, "http") == true {
 		chanMsg(client, "URL Doesn't meet whitelist, sorry.")
 		// Don't do anything
 		return false
 	}
 
 	// FOR IDs
-	idn, _ := strconv.Atoi(id)
+	idn, _ := strconv.Atoi(path)
 	human := queueID(idn)
 	if human != "" {
 		chanMsg(client, "Added: "+human)
@@ -160,53 +172,70 @@ func queueID(trackID int) (human string) {
 }
 
 func play(path string, client *gumble.Client) {
-	if stream.State() == gumbleffmpeg.StatePlaying {
-		stream.Stop()
+	if stream != nil {
+		if stream.State() == gumbleffmpeg.StatePlaying {
+			stream.Stop()
+		}
 	}
 
+	removeHtmlTags := regexp.MustCompile("<[^>]*>")
+	path = removeHtmlTags.ReplaceAllString(path, "")
+	chanMsg(client, "Now Playing: "+metalist[currentsong])
 	if strings.HasPrefix(path, "http") {
 		playYT(path, client)
 	} else {
 		playFile(path, client)
 	}
+	isPlaying = true
 
+	go waitForStop(client)
+
+}
+
+// Probably horrific logic
+func waitForStop(client *gumble.Client) {
 	// wait for playback to stop
+	if isWaiting == true {
+		return
+	}
+	isWaiting = true
 	stream.Wait()
 	switch doNext {
 	case "stop":
-		return
+		isPlaying = false
+		// Do nothing
 	case "next":
-		if len(songlist) > currentsong {
+		if len(songlist) > currentsong+1 {
 			currentsong++
 			play(songlist[currentsong], client)
-			return
 		} else {
 			doNext = "stop"
-			return
 		}
 	case "skip":
 		if len(songlist) > (currentsong + 1) {
-			currentsong = currentsong + 2
+			currentsong = currentsong + 1
 			play(songlist[currentsong], client)
 			doNext = "next"
-			return
 		}
 	default:
-		return
+		isWaiting = false
 	}
+
+	isWaiting = false
+	return
 
 }
 
 func playbackControls(client *gumble.Client, message string, songdb string, maxDBID int) {
 	if isCommand(message, cmdPrefix+"play") {
 		id := lazyRemovePrefix(message, "play")
-		if stream != nil && songlist != nil && id == "" {
+		if stream != nil && len(songlist) > 0 && id == "" {
 			// if stream and songlist exists
 			stream.Play()
 			doNext = "next"
 		} else if id == "" && stream == nil {
 			// Do nothing if nothing is queued
-		} else if id != "" && songlist == nil {
+		} else if id != "" && len(songlist) == 0 {
 			// Add to queue then start playing queue
 			queued := addToQueue(client, id)
 			if queued == true {
@@ -214,7 +243,8 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 				doNext = "next"
 			}
 		} else {
-			addToQueue(client, id)
+			queued := addToQueue(client, id)
+			fmt.Println("Other Queued:", queued)
 			doNext = "next"
 		}
 		return
@@ -245,6 +275,9 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 		randsrc := rand.New(seed)
 		id := randsrc.Intn(maxDBID)
 		addToQueue(client, strconv.Itoa(id))
+		if isPlaying == false {
+			play(songlist[currentsong], client)
+		}
 		return
 	}
 
@@ -261,6 +294,7 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 
 	// Stop Playback
 	if isCommand(message, cmdPrefix+"stop") {
+		doNext = "stop"
 		err := stream.Stop()
 		if err != nil {
 			fmt.Println(err.Error())
