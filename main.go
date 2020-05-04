@@ -19,10 +19,18 @@ import (
 )
 
 var stream *gumbleffmpeg.Stream
+var songlist = make([]string, 0)
+var metalist = make([]string, 0)
+var currentsong = 0
+var doNext = "stop" // stop, next, skip [int]
 
 // Eventually allow these to be grabbed from configuration file
 var volumeLevel float32
 var cmdPrefix = "!"
+
+// Database generated from gendb
+var songdb = "./media.db"
+var maxDBID = getMaxID(songdb)
 
 func main() {
 	files := make(map[string]string)
@@ -31,11 +39,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage of %s: [flags] [audio files...]\n", os.Args[0])
 		flag.PrintDefaults()
 	}
-
-	// Database generated from gendb
-	var songdb = "./media.db"
-	maxDBID := getMaxID(songdb)
-
 	volumeLevel = 0.25 // Default volume level
 
 	gumbleutil.Main(gumbleutil.AutoBitrate, gumbleutil.Listener{
@@ -47,7 +50,6 @@ func main() {
 
 			fmt.Printf("audio player loaded! (%d files)\n", maxDBID)
 		},
-
 		TextMessage: func(e *gumble.TextMessageEvent) {
 			if e.Sender == nil {
 				fmt.Println("Sender Was Null")
@@ -61,7 +63,7 @@ func main() {
 	})
 }
 
-func playFile(client *gumble.Client, path string) {
+func playFile(path string, client *gumble.Client) {
 	if stream != nil {
 		stream.Stop()
 	}
@@ -87,7 +89,7 @@ func isWhiteListedUrl(url string) bool {
 }
 
 // Play youtube video
-func playYT(client *gumble.Client, url string) {
+func playYT(url string, client *gumble.Client) {
 	removeHtmlTags := regexp.MustCompile("<[^>]*>")
 	url = removeHtmlTags.ReplaceAllString(url, "")
 	if isWhiteListedUrl(url) == false {
@@ -99,7 +101,7 @@ func playYT(client *gumble.Client, url string) {
 		stream.Stop()
 	}
 
-	stream = gumbleffmpeg.New(client, gumbleffmpeg.SourceExec("youtube-dl", "-f", "bestaudio", "-q", "-o", "-", url))
+	stream = gumbleffmpeg.New(client, gumbleffmpeg.SourceExec("youtube-dl", "-f", "bestaudio", "--rm-cache-dir", "-q", "-o", "-", url))
 	stream.Volume = volumeLevel
 
 	if err := stream.Play(); err != nil {
@@ -109,34 +111,140 @@ func playYT(client *gumble.Client, url string) {
 	}
 
 }
-func playID(songdb string, client *gumble.Client, id, maxDBID int) string {
-	path, human := GetTrackById(songdb, id, maxDBID)
+func playID(id int, client *gumble.Client) string {
+	path, human := GetTrackById(songdb, id)
 	chanMsg(client, "Now Playing: "+human)
-	playFile(client, path)
+	playFile(path, client)
 	return human
 }
 
 // Sends Message to current mumble channel
 func chanMsg(client *gumble.Client, msg string) { client.Self.Channel.Send(msg, false) }
 
-func playbackControls(client *gumble.Client, message string, songdb string, maxDBID int) {
-	if isCommand(message, cmdPrefix+"play ") {
-		id, _ := strconv.Atoi(lazyRemovePrefix(message, "play "))
-		playID(songdb, client, id, maxDBID)
+func addToQueue(client *gumble.Client, id string) bool {
+	// For YTDL URLS
+	if strings.HasPrefix(id, "http") && isWhiteListedUrl(id) == true {
+		// add to playlist
+		chanMsg(client, "Added: "+id)
+		return true
+	} else if strings.HasPrefix(id, "http") == true {
+		chanMsg(client, "URL Doesn't meet whitelist, sorry.")
+		// Don't do anything
+		return false
+	}
+
+	// FOR IDs
+	idn, _ := strconv.Atoi(id)
+	human := queueID(idn)
+	if human != "" {
+		chanMsg(client, "Added: "+human)
+		return true
+	}
+
+	chanMsg(client, "Nothing added.")
+	return false
+}
+
+func queueID(trackID int) (human string) {
+	if trackID > maxDBID || trackID < 1 {
+		return ""
+	}
+	path, human := GetTrackById(songdb, trackID)
+	if path == "" {
+		return ""
+	}
+	songlist = append(songlist, path)
+	metalist = append(metalist, human)
+
+	return human
+}
+
+func play(path string, client *gumble.Client) {
+	if stream.State() == gumbleffmpeg.StatePlaying {
+		stream.Stop()
+	}
+
+	if strings.HasPrefix(path, "http") {
+		playYT(path, client)
+	} else {
+		playFile(path, client)
+	}
+
+	// wait for playback to stop
+	stream.Wait()
+	switch doNext {
+	case "stop":
+		return
+	case "next":
+		if len(songlist) > currentsong {
+			currentsong++
+			play(songlist[currentsong], client)
+			return
+		} else {
+			doNext = "stop"
+			return
+		}
+	case "skip":
+		if len(songlist) > (currentsong + 1) {
+			currentsong = currentsong + 2
+			play(songlist[currentsong], client)
+			doNext = "next"
+			return
+		}
+	default:
 		return
 	}
 
-	if isCommand(message, cmdPrefix+"yt ") {
-		url := lazyRemovePrefix(message, "yt ")
-		playYT(client, url)
+}
+
+func playbackControls(client *gumble.Client, message string, songdb string, maxDBID int) {
+	if isCommand(message, cmdPrefix+"play") {
+		id := lazyRemovePrefix(message, "play")
+		if stream != nil && songlist != nil && id == "" {
+			// if stream and songlist exists
+			stream.Play()
+			doNext = "next"
+		} else if id == "" && stream == nil {
+			// Do nothing if nothing is queued
+		} else if id != "" && songlist == nil {
+			// Add to queue then start playing queue
+			queued := addToQueue(client, id)
+			if queued == true {
+				play(songlist[currentsong], client)
+				doNext = "next"
+			}
+		} else {
+			addToQueue(client, id)
+			doNext = "next"
+		}
 		return
 	}
+
+	if isCommand(message, cmdPrefix+"list") {
+		current := currentsong
+		amount := len(songlist) - current
+
+		var output string
+		for i := 0; i < amount; i++ {
+			output += fmt.Sprintf("# %d: %s\n", i, metalist[current+i])
+		}
+
+		trkqueued := fmt.Sprintf("%d Track(s) Queued.\n", len(songlist)-current)
+
+		chanMsg(client, trkqueued+output)
+	}
+
+	//if isCommand(message, cmdPrefix+"yt ") {
+	//	url := lazyRemovePrefix(message, "yt ")
+	//	playYT(url, client)
+	//	return
+	//}
 
 	if isCommand(message, cmdPrefix+"rand") {
 		seed := rand.NewSource(time.Now().UnixNano())
 		randsrc := rand.New(seed)
 		id := randsrc.Intn(maxDBID)
-		playID(songdb, client, id, maxDBID)
+		addToQueue(client, strconv.Itoa(id))
 		return
 	}
 
@@ -148,12 +256,6 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 	// If stream object doesn't exist yet, don't do anything to avoid dereference
 	if stream == nil {
 		fmt.Println("Stream is null")
-		return
-	}
-
-	// Start stream, resumes .Pause()
-	if isCommand(message, cmdPrefix+"play") {
-		stream.Play()
 		return
 	}
 
@@ -174,8 +276,8 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 
 	// Set volume
 	// At some point consider switching to percentage based system
-	if isCommand(message, cmdPrefix+"volume ") {
-		message = "." + lazyRemovePrefix(message, "volume") // TODO: Check volume prefix removal (Probably not ! )
+	if isCommand(message, cmdPrefix+"vol ") {
+		message = "." + lazyRemovePrefix(message, "vol")
 		value, err := strconv.ParseFloat(message, 32)
 
 		if err == nil {
@@ -186,13 +288,15 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 	}
 
 	// Send current volume to channel
-	if isCommand(message, cmdPrefix+"volume") {
+	if isCommand(message, cmdPrefix+"vol") {
 		chanMsg(client, "Current Volume: "+fmt.Sprintf("%f", stream.Volume))
 		return
 	}
 
 	// Skip to next track in playlist
 	if isCommand(message, cmdPrefix+"skip") {
+		doNext = "skip"
+		stream.Stop()
 		return
 	}
 }
@@ -214,7 +318,7 @@ func lazyRemovePrefix(message, prefix string) string {
 }
 
 // Query SQLite database to get filepath related to ID
-func GetTrackById(songdb string, trackID, maxDBID int) (filepath, humanout string) {
+func GetTrackById(songdb string, trackID int) (filepath, humanout string) {
 	if trackID > maxDBID {
 		return "", ""
 	}
