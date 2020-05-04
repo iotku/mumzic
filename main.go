@@ -130,7 +130,7 @@ func queueYT(url, human string) string {
 	return human
 }
 
-func addToQueue(client *gumble.Client, path string) bool {
+func addToQueue(path string, client *gumble.Client) bool {
 	// For YTDL URLS
 	removeHtmlTags := regexp.MustCompile("<[^>]*>")
 	path = removeHtmlTags.ReplaceAllString(path, "")
@@ -237,14 +237,13 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 			// Do nothing if nothing is queued
 		} else if id != "" && len(songlist) == 0 {
 			// Add to queue then start playing queue
-			queued := addToQueue(client, id)
+			queued := addToQueue(id, client)
 			if queued == true {
 				play(songlist[currentsong], client)
 				doNext = "next"
 			}
 		} else {
-			queued := addToQueue(client, id)
-			fmt.Println("Other Queued:", queued)
+			addToQueue(id, client)
 			doNext = "next"
 		}
 		return
@@ -264,17 +263,11 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 		chanMsg(client, trkqueued+output)
 	}
 
-	//if isCommand(message, cmdPrefix+"yt ") {
-	//	url := lazyRemovePrefix(message, "yt ")
-	//	playYT(url, client)
-	//	return
-	//}
-
 	if isCommand(message, cmdPrefix+"rand") {
 		seed := rand.NewSource(time.Now().UnixNano())
 		randsrc := rand.New(seed)
 		id := randsrc.Intn(maxDBID)
-		addToQueue(client, strconv.Itoa(id))
+		addToQueue(strconv.Itoa(id), client)
 		if isPlaying == false {
 			play(songlist[currentsong], client)
 		}
