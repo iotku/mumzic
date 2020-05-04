@@ -270,19 +270,38 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 		current := currentsong
 		amount := len(songlist) - current
 
+		// Try poorly to avoid messages being dropped by mumble server for sending too fast
+		var throttle bool
+		if amount > 10 {
+			amount = 10
+			throttle = true
+		}
+
 		for i := 0; i < amount; i++ {
 			chanMsg(client, fmt.Sprintf("# %d: %s\n", i, metalist[current+i]))
+			if throttle && i > 4 {
+				time.Sleep(150 * time.Millisecond)
+			}
+
 		}
 
 		chanMsg(client, fmt.Sprintf("%d Track(s) Queued.\n", len(songlist)-current))
-
+		return
 	}
 
 	if isCommand(message, cmdPrefix+"rand") {
+		howMany := lazyRemovePrefix(message, "rand")
+		value, err := strconv.Atoi(howMany)
+		if err != nil {
+			return
+		}
 		seed := rand.NewSource(time.Now().UnixNano())
 		randsrc := rand.New(seed)
 
-		for i := 0; i < 5; i++ {
+		if value > 10 {
+			value = 10
+		}
+		for i := 0; i < value; i++ {
 			id := randsrc.Intn(maxDBID)
 			addToQueue(strconv.Itoa(id), client)
 		}
@@ -297,7 +316,6 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 
 	// If stream object doesn't exist yet, don't do anything to avoid dereference
 	if stream == nil {
-		fmt.Println("Stream is null")
 		return
 	}
 
@@ -353,6 +371,7 @@ func checkErr(err error) {
 }
 
 func isCommand(message, command string) bool {
+	message = strings.ToLower(message)
 	return strings.HasPrefix(message, command)
 }
 
@@ -417,8 +436,6 @@ func makeDbQuery(songdb, query string, args ...interface{}) *sql.Rows {
 	db, err := sql.Open("sqlite3", songdb)
 	checkErr(err)
 	defer db.Close()
-	fmt.Println(query)
-	fmt.Println(args)
 	rows, err := db.Query(query, args...)
 	checkErr(err)
 
