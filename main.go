@@ -210,6 +210,9 @@ func waitForStop(client *gumble.Client) {
 			doNext = "stop"
 		}
 	case "skip":
+		if currentsong+skipBy < 0 {
+			break
+		}
 		if len(songlist) > (currentsong + skipBy) {
 			currentsong = currentsong + skipBy
 			play(songlist[currentsong], client)
@@ -248,14 +251,18 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 	}
 
 	if isCommand(message, cmdPrefix+"play") {
-		if len(songlist) > 0 {
+		// Skip Current track for frequent cases where you've just queued a new track and want to start
+		if isPlaying == false && len(songlist) == currentsong+2 {
+			currentsong = currentsong + 1
+			play(songlist[currentsong], client)
+			doNext = "next"
+		} else if len(songlist) > 0 {
 			// if stream and songlist exists
 			play(songlist[currentsong], client)
 			doNext = "next"
 		} else if stream == nil {
 			// Do nothing if nothing is queued
 		}
-
 		return
 	}
 
