@@ -9,6 +9,7 @@ import (
 	"layeh.com/gumble/gumbleffmpeg"
 	"layeh.com/gumble/gumbleutil"
 	_ "layeh.com/gumble/opus"
+	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -22,9 +23,12 @@ var stream *gumbleffmpeg.Stream
 var songlist = make([]string, 0)
 var metalist = make([]string, 0)
 var currentsong = 0
+
+// This can probably be replaced by with good control flow and/or channels, might be subject to race conditions
 var doNext = "stop" // stop, next, skip [int]
 var isWaiting bool
 var isPlaying bool
+var skipBy = 1
 
 // Eventually allow these to be grabbed from configuration file
 var volumeLevel float32
@@ -180,13 +184,13 @@ func play(path string, client *gumble.Client) {
 
 	removeHtmlTags := regexp.MustCompile("<[^>]*>")
 	path = removeHtmlTags.ReplaceAllString(path, "")
+	isPlaying = true
 	chanMsg(client, "Now Playing: "+metalist[currentsong])
 	if strings.HasPrefix(path, "http") {
 		playYT(path, client)
 	} else {
 		playFile(path, client)
 	}
-	isPlaying = true
 
 	go waitForStop(client)
 
@@ -212,30 +216,30 @@ func waitForStop(client *gumble.Client) {
 			doNext = "stop"
 		}
 	case "skip":
-		if len(songlist) > (currentsong + 1) {
+		if len(songlist) > (currentsong + skipBy) {
+			currentsong = currentsong + skipBy
+			play(songlist[currentsong], client)
+			doNext = "next"
+			skipBy = 1
+		} else if len(songlist) > (currentsong + 1) {
 			currentsong = currentsong + 1
 			play(songlist[currentsong], client)
 			doNext = "next"
+			skipBy = 1
 		}
 	default:
 		isWaiting = false
 	}
-
+	isPlaying = false
 	isWaiting = false
 	return
 
 }
 
 func playbackControls(client *gumble.Client, message string, songdb string, maxDBID int) {
-	if isCommand(message, cmdPrefix+"play") {
-		id := lazyRemovePrefix(message, "play")
-		if stream != nil && len(songlist) > 0 && id == "" {
-			// if stream and songlist exists
-			stream.Play()
-			doNext = "next"
-		} else if id == "" && stream == nil {
-			// Do nothing if nothing is queued
-		} else if id != "" && len(songlist) == 0 {
+	if isCommand(message, cmdPrefix+"play ") {
+		id := lazyRemovePrefix(message, "play ")
+		if id != "" && len(songlist) == 0 {
 			// Add to queue then start playing queue
 			queued := addToQueue(id, client)
 			if queued == true {
@@ -249,28 +253,39 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 		return
 	}
 
+	if isCommand(message, cmdPrefix+"play") {
+		if len(songlist) > 0 {
+			// if stream and songlist exists
+			play(songlist[currentsong], client)
+			doNext = "next"
+		} else if stream == nil {
+			// Do nothing if nothing is queued
+		}
+
+		return
+	}
+
 	if isCommand(message, cmdPrefix+"list") {
 		current := currentsong
 		amount := len(songlist) - current
 
-		var output string
 		for i := 0; i < amount; i++ {
-			output += fmt.Sprintf("# %d: %s\n", i, metalist[current+i])
+			chanMsg(client, fmt.Sprintf("# %d: %s\n", i, metalist[current+i]))
 		}
 
-		trkqueued := fmt.Sprintf("%d Track(s) Queued.\n", len(songlist)-current)
+		chanMsg(client, fmt.Sprintf("%d Track(s) Queued.\n", len(songlist)-current))
 
-		chanMsg(client, trkqueued+output)
 	}
 
 	if isCommand(message, cmdPrefix+"rand") {
 		seed := rand.NewSource(time.Now().UnixNano())
 		randsrc := rand.New(seed)
-		id := randsrc.Intn(maxDBID)
-		addToQueue(strconv.Itoa(id), client)
-		if isPlaying == false {
-			play(songlist[currentsong], client)
+
+		for i := 0; i < 5; i++ {
+			id := randsrc.Intn(maxDBID)
+			addToQueue(strconv.Itoa(id), client)
 		}
+
 		return
 	}
 
@@ -322,6 +337,14 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 
 	// Skip to next track in playlist
 	if isCommand(message, cmdPrefix+"skip") {
+		howMany := lazyRemovePrefix(message, "skip")
+		value, err := strconv.Atoi(howMany)
+		if err != nil {
+			log.Println(err)
+			skipBy = 1
+		} else {
+			skipBy = value
+		}
 		doNext = "skip"
 		stream.Stop()
 		return
