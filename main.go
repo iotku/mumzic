@@ -33,6 +33,7 @@ var skipBy = 1
 // Eventually allow these to be grabbed from configuration file
 var volumeLevel float32
 var cmdPrefix = "!"
+var maxLines = 10 // Max amount of lines you wish commands to output (before hopefully, going into an unimplemented more buffer)
 
 // Database generated from gendb
 var songdb = "./media.db"
@@ -77,9 +78,9 @@ func playFile(path string, client *gumble.Client) {
 	stream = gumbleffmpeg.New(client, gumbleffmpeg.SourceFile(path))
 	stream.Volume = volumeLevel
 	if err := stream.Play(); err != nil {
-		fmt.Printf("%s\n", err)
+		debugPrintln(err)
 	} else {
-		fmt.Printf("Playing %s\n", path)
+		debugPrintln("Playing:", path)
 	}
 }
 
@@ -111,9 +112,9 @@ func playYT(url string, client *gumble.Client) {
 	stream.Volume = volumeLevel
 
 	if err := stream.Play(); err != nil {
-		fmt.Printf("%s\n", err)
+		debugPrintln(err)
 	} else {
-		fmt.Printf("Playing %s\n", url)
+		debugPrintln("Playing:", url)
 	}
 
 }
@@ -208,6 +209,7 @@ func waitForStop(client *gumble.Client) {
 			play(songlist[currentsong], client)
 		} else {
 			doNext = "stop"
+			isPlaying = false
 		}
 	case "skip":
 		if currentsong+skipBy < 0 {
@@ -227,13 +229,32 @@ func waitForStop(client *gumble.Client) {
 	default:
 		isWaiting = false
 	}
-	isPlaying = false
 	isWaiting = false
 	return
 
 }
 
+func playOnly(client *gumble.Client) {
+	// Skip Current track for frequent cases where you've just queued a new track and want to start
+	if isPlaying == false && len(songlist) == currentsong+2 {
+		currentsong = currentsong + 1
+		play(songlist[currentsong], client)
+		doNext = "next"
+	} else if len(songlist) > 0 && isPlaying == false {
+		// if stream and songlist exists
+		play(songlist[currentsong], client)
+		doNext = "next"
+	} else if stream == nil {
+		// Do nothing if nothing is queued
+	}
+}
+
+func debugPrintln(inter ...interface{}) {
+	log.Println(inter)
+}
+
 func playbackControls(client *gumble.Client, message string, songdb string, maxDBID int) {
+	debugPrintln("isPlaying:", isPlaying, "doNext:", doNext)
 	if isCommand(message, cmdPrefix+"play ") {
 		id := lazyRemovePrefix(message, "play ")
 		if id != "" && len(songlist) == 0 {
@@ -243,26 +264,18 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 				play(songlist[currentsong], client)
 				doNext = "next"
 			}
+		} else if id == "" {
+			playOnly(client)
 		} else {
 			addToQueue(id, client)
 			doNext = "next"
+			playOnly(client)
 		}
 		return
 	}
 
 	if isCommand(message, cmdPrefix+"play") {
-		// Skip Current track for frequent cases where you've just queued a new track and want to start
-		if isPlaying == false && len(songlist) == currentsong+2 {
-			currentsong = currentsong + 1
-			play(songlist[currentsong], client)
-			doNext = "next"
-		} else if len(songlist) > 0 {
-			// if stream and songlist exists
-			play(songlist[currentsong], client)
-			doNext = "next"
-		} else if stream == nil {
-			// Do nothing if nothing is queued
-		}
+		playOnly(client)
 		return
 	}
 
@@ -272,8 +285,8 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 
 		// Try poorly to avoid messages being dropped by mumble server for sending too fast
 		var throttle bool
-		if amount > 10 {
-			amount = 10
+		if amount > maxLines {
+			amount = maxLines
 			throttle = true
 		}
 
@@ -298,8 +311,8 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 		seed := rand.NewSource(time.Now().UnixNano())
 		randsrc := rand.New(seed)
 
-		if value > 10 {
-			value = 10
+		if value > maxLines {
+			value = maxLines
 		}
 		for i := 0; i < value; i++ {
 			id := randsrc.Intn(maxDBID)
@@ -372,7 +385,11 @@ func checkErr(err error) {
 
 func isCommand(message, command string) bool {
 	message = strings.ToLower(message)
-	return strings.HasPrefix(message, command)
+	isCommand := strings.HasPrefix(message, command)
+	if isCommand {
+		debugPrintln("Command: ", command, "Message:", message)
+	}
+	return isCommand
 }
 
 // Remove prefix from command for single argument (I.E. "!play 22" -> "22")
