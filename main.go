@@ -5,12 +5,14 @@ import (
 	"flag"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/net/html"
 	"layeh.com/gumble/gumble"
 	"layeh.com/gumble/gumbleffmpeg"
 	"layeh.com/gumble/gumbleutil"
 	_ "layeh.com/gumble/opus"
 	"log"
 	"math/rand"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -20,8 +22,8 @@ import (
 )
 
 var stream *gumbleffmpeg.Stream
-var songlist = make([]string, 0)
-var metalist = make([]string, 0)
+var songlist = make([]string, 0) // Contains Raw paths (filepath or url)
+var metalist = make([]string, 0) // Contains "Human" readable Titles corresponding to songlist entry
 var currentsong = 0
 
 // This can probably be replaced by with good control flow and/or channels, might be subject to race conditions
@@ -72,7 +74,8 @@ func main() {
 
 func playFile(path string, client *gumble.Client) {
 	if stream != nil {
-		stream.Stop()
+		err := stream.Stop()
+		debugPrintln(err)
 	}
 
 	stream = gumbleffmpeg.New(client, gumbleffmpeg.SourceFile(path))
@@ -105,7 +108,8 @@ func playYT(url string, client *gumble.Client) {
 	}
 
 	if stream != nil {
-		stream.Stop()
+		err := stream.Stop()
+		debugPrintln(err)
 	}
 
 	stream = gumbleffmpeg.New(client, gumbleffmpeg.SourceExec("youtube-dl", "-f", "bestaudio", "--rm-cache-dir", "-q", "-o", "-", url))
@@ -124,9 +128,33 @@ func chanMsg(client *gumble.Client, msg string) { client.Self.Channel.Send(msg, 
 
 func queueYT(url, human string) string {
 	// TODO Check with API if video is valid for youtube links
+
 	songlist = append(songlist, url)
 	metalist = append(metalist, human)
 	return human
+}
+
+func getHtmlTitle(url string) string {
+	s, _ := http.Get(url)
+	parse, err := html.Parse(s.Body)
+	if err != nil {
+		fmt.Println(err.Error)
+	}
+	return extractTitle(parse)
+}
+
+func extractTitle(n *html.Node) string {
+	if n.Type == html.ElementNode && n.Data == "title" {
+		return n.FirstChild.Data
+	}
+
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		title := extractTitle(c)
+		if title != "" {
+			return title
+		}
+	}
+	return ""
 }
 
 func addToQueue(path string, client *gumble.Client) bool {
@@ -135,8 +163,17 @@ func addToQueue(path string, client *gumble.Client) bool {
 	path = removeHtmlTags.ReplaceAllString(path, "")
 	if strings.HasPrefix(path, "http") && isWhiteListedUrl(path) == true {
 		// add to playlist
-		queueYT(path, path)
-		chanMsg(client, "Added: "+path)
+		// Get "Human" from web page title (I hope this doesn't trigger anti-spam...)
+		var human string
+		title := getHtmlTitle(path)
+		debugPrintln("Title:", title)
+		if title != "" {
+			human = title
+		} else {
+			human = path
+		}
+		queueYT(path, human)
+		chanMsg(client, "Added: "+human)
 		return true
 	} else if strings.HasPrefix(path, "http") == true {
 		chanMsg(client, "URL Doesn't meet whitelist, sorry.")
@@ -173,7 +210,8 @@ func queueID(trackID int) (human string) {
 func play(path string, client *gumble.Client) {
 	if stream != nil {
 		if stream.State() == gumbleffmpeg.StatePlaying {
-			stream.Stop()
+			err := stream.Stop()
+			debugPrintln(err)
 		}
 	}
 
@@ -213,6 +251,7 @@ func waitForStop(client *gumble.Client) {
 		}
 	case "skip":
 		if currentsong+skipBy < 0 {
+			isPlaying = false
 			break
 		}
 		if len(songlist) > (currentsong + skipBy) {
@@ -247,10 +286,6 @@ func playOnly(client *gumble.Client) {
 	} else if stream == nil {
 		// Do nothing if nothing is queued
 	}
-}
-
-func debugPrintln(inter ...interface{}) {
-	log.Println(inter)
 }
 
 func playbackControls(client *gumble.Client, message string, songdb string, maxDBID int) {
@@ -344,7 +379,7 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 
 	// Set volume
 	// At some point consider switching to percentage based system
-	if isCommand(message, cmdPrefix+"vol ") {
+	if isCommand(message, cmdPrefix+"vol ") || isCommand(message, cmdPrefix+"volume ") {
 		message = "." + lazyRemovePrefix(message, "vol")
 		value, err := strconv.ParseFloat(message, 32)
 
@@ -372,30 +407,22 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 			skipBy = value
 		}
 		doNext = "skip"
-		stream.Stop()
+		err = stream.Stop()
+		debugPrintln(err)
 		return
 	}
 }
 
-func checkErr(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-func isCommand(message, command string) bool {
-	message = strings.ToLower(message)
-	isCommand := strings.HasPrefix(message, command)
-	if isCommand {
-		debugPrintln("Command: ", command, "Message:", message)
-	}
-	return isCommand
-}
-
-// Remove prefix from command for single argument (I.E. "!play 22" -> "22")
-func lazyRemovePrefix(message, prefix string) string {
-	char := cmdPrefix
-	return strings.TrimSpace(message[len(char+prefix):len(message)])
+// Query SQLite database to count maximum amount of rows, as to not point to non existent ID
+// TODO: Perhaps catch error instead?
+func getMaxID(database string) int {
+	db, err := sql.Open("sqlite3", database)
+	defer db.Close()
+	checkErr(err)
+	var count int
+	err = db.QueryRow("SELECT id FROM music WHERE ID = (SELECT MAX(ID) FROM music);").Scan(&count)
+	checkErr(err)
+	return count
 }
 
 // Query SQLite database to get filepath related to ID
@@ -417,18 +444,6 @@ func GetTrackById(songdb string, trackID int) (filepath, humanout string) {
 
 	humanout = artist + " - " + title
 	return path, humanout
-}
-
-// Query SQLite database to count maximum amount of rows, as to not point to non existent ID
-// TODO: Perhaps catch error instead?
-func getMaxID(database string) int {
-	db, err := sql.Open("sqlite3", database)
-	defer db.Close()
-	checkErr(err)
-	var count int
-	err = db.QueryRow("SELECT id FROM music WHERE ID = (SELECT MAX(ID) FROM music);").Scan(&count)
-	checkErr(err)
-	return count
 }
 
 func SearchALL(songdb, Query string, client *gumble.Client) {
@@ -458,4 +473,31 @@ func makeDbQuery(songdb, query string, args ...interface{}) *sql.Rows {
 
 	// Don't forget to close in function where called.
 	return rows
+}
+
+func debugPrintln(inter ...interface{}) {
+	if inter != nil {
+		log.Println(inter)
+	}
+}
+
+func checkErr(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+func isCommand(message, command string) bool {
+	message = strings.ToLower(message)
+	isCommand := strings.HasPrefix(message, command)
+	if isCommand {
+		debugPrintln("Command: ", command, "Message:", message)
+	}
+	return isCommand
+}
+
+// Remove prefix from command for single argument (I.E. "!play 22" -> "22")
+func lazyRemovePrefix(message, prefix string) string {
+	char := cmdPrefix
+	return strings.TrimSpace(message[len(char+prefix):])
 }
