@@ -137,9 +137,11 @@ func queueYT(url, human string) string {
 func getHtmlTitle(url string) string {
 	s, _ := http.Get(url)
 	parse, err := html.Parse(s.Body)
+
 	if err != nil {
 		fmt.Println(err.Error)
 	}
+
 	return extractTitle(parse)
 }
 
@@ -165,7 +167,7 @@ func addToQueue(path string, client *gumble.Client) bool {
 		// add to playlist
 		// Get "Human" from web page title (I hope this doesn't trigger anti-spam...)
 		var human string
-		title := getHtmlTitle(path)
+		title := getHtmlTitle(path) // TODO: Remove "- Youtube" and "| Free Listening on SoundCloud" // Handle case where youtube only returns "Youtube"
 		debugPrintln("Title:", title)
 		if title != "" {
 			human = title
