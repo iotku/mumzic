@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	_ "github.com/mattn/go-sqlite3"
-	"layeh.com/gumble/gumble"
 )
 
 // Database generated from gendb
@@ -54,21 +53,21 @@ func GetTrackById(trackID int) (filepath, humanout string) {
 	return path, humanout
 }
 
-func SearchALL(Query string, client *gumble.Client) {
+func SearchALL(Query string) []string {
 	Query = fmt.Sprintf("%%%s%%", Query)
 	rows := makeDbQuery(songdb, "SELECT * FROM music where (artist || \" \" || title)  LIKE ? LIMIT 25", Query)
 	defer rows.Close()
 
 	var id int
 	var artist, album, title, path string
-
+	var output []string
 	for rows.Next() {
 		err := rows.Scan(&id, &artist, &album, &title, &path)
 		checkErr(err)
-		chanMsg(client, fmt.Sprintf("#%d | %s - %s (%s)\n", id, artist, title, album))
+		output = append(output, fmt.Sprintf("#%d | %s - %s (%s)", id, artist, title, album))
 	}
 
-	return
+	return output
 }
 
 // Helper Functions
@@ -82,6 +81,3 @@ func makeDbQuery(songdb, query string, args ...interface{}) *sql.Rows {
 	// Don't forget to close in function where called.
 	return rows
 }
-
-// TODO: consider handling sending messages outside of the search package for more proper segmentation
-func chanMsg(client *gumble.Client, msg string) { client.Self.Channel.Send(msg, false) }

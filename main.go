@@ -83,22 +83,20 @@ func playFile(path string, client *gumble.Client) {
 	}
 }
 
-func isWhiteListedUrl(url string) bool {
+func isWhiteListedURL(url string) bool {
 	whiteListedURLS := []string{"https://www.youtube.com/", "https://youtu.be/", "https://soundcloud.com/"}
 	for i := range whiteListedURLS {
 		if strings.HasPrefix(url, whiteListedURLS[i]) {
 			return true
 		}
 	}
-
 	return false
 }
 
 // Play youtube video
 func playYT(url string, client *gumble.Client) {
-	removeHtmlTags := regexp.MustCompile("<[^>]*>")
-	url = removeHtmlTags.ReplaceAllString(url, "")
-	if isWhiteListedUrl(url) == false {
+	url = stripHTMLTags(url)
+	if isWhiteListedURL(url) == false {
 		chanMsg(client, "URL Doesn't meet whitelist, sorry.")
 		return
 	}
@@ -145,9 +143,8 @@ func getYtdlTitle(url string) string {
 
 func addToQueue(path string, client *gumble.Client) bool {
 	// For YTDL URLS
-	removeHtmlTags := regexp.MustCompile("<[^>]*>")
-	path = removeHtmlTags.ReplaceAllString(path, "")
-	if strings.HasPrefix(path, "http") && isWhiteListedUrl(path) == true {
+	path = stripHTMLTags(path)
+	if strings.HasPrefix(path, "http") && isWhiteListedURL(path) == true {
 		// add to playlist
 		// Get "Human" from web page title (I hope this doesn't trigger anti-spam...)
 		var human string
@@ -201,8 +198,7 @@ func play(path string, client *gumble.Client) {
 		}
 	}
 
-	removeHtmlTags := regexp.MustCompile("<[^>]*>")
-	path = removeHtmlTags.ReplaceAllString(path, "")
+	path = stripHTMLTags(path)
 	isPlaying = true
 	chanMsg(client, "Now Playing: "+metalist[currentsong])
 	client.Self.SetComment("Now Playing: " + metalist[currentsong])
@@ -214,6 +210,12 @@ func play(path string, client *gumble.Client) {
 
 	go waitForStop(client)
 
+}
+
+func stripHTMLTags(str string) string {
+	removeHTMLTags := regexp.MustCompile("<[^>]*>")
+	str = removeHTMLTags.ReplaceAllString(str, "")
+	return str
 }
 
 // Probably horrific logic
@@ -345,7 +347,10 @@ func playbackControls(client *gumble.Client, message string, maxDBID int) {
 	}
 
 	if isCommand(message, cmdPrefix+"search ") {
-		search.SearchALL(lazyRemovePrefix(message, "search "), client)
+		results := search.SearchALL(lazyRemovePrefix(message, "search "))
+		for _, v := range results {
+			chanMsg(client, v)
+		}
 		return
 	}
 
@@ -402,7 +407,7 @@ func playbackControls(client *gumble.Client, message string, maxDBID int) {
 
 func debugPrintln(inter ...interface{}) {
 	if inter != nil {
-		log.Println(inter)
+		log.Println(inter...)
 	}
 }
 
