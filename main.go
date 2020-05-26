@@ -7,7 +7,6 @@ import (
 	"log"
 	"math/rand"
 	"mumzic/search"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,7 +16,6 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
-	"golang.org/x/net/html"
 	"layeh.com/gumble/gumble"
 	"layeh.com/gumble/gumbleffmpeg"
 	"layeh.com/gumble/gumbleutil"
@@ -133,36 +131,11 @@ func queueYT(url, human string) string {
 	return human
 }
 
-func getHtmlTitle(url string) string {
-	s, _ := http.Get(url)
-	parse, err := html.Parse(s.Body)
-
-	if err != nil {
-		fmt.Println(err.Error)
-	}
-
-	return extractTitle(parse)
-}
-
-func extractTitle(n *html.Node) string {
-	if n.Type == html.ElementNode && n.Data == "title" {
-		return n.FirstChild.Data
-	}
-
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		title := extractTitle(c)
-		if title != "" {
-			return title
-		}
-	}
-	return ""
-}
-
 func getYtdlTitle(url string) string {
 	ytdl := exec.Command("youtube-dl", "-e", url)
 	var output bytes.Buffer
 	ytdl.Stdout = &output
-	err := ytdl.Run
+	err := ytdl.Run()
 	if err != nil {
 		log.Println("Youtube-DL failed to get title for", url)
 		return ""
