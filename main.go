@@ -1,17 +1,11 @@
 package main
 
 import (
-	"database/sql"
 	"flag"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
-	"golang.org/x/net/html"
-	"layeh.com/gumble/gumble"
-	"layeh.com/gumble/gumbleffmpeg"
-	"layeh.com/gumble/gumbleutil"
-	_ "layeh.com/gumble/opus"
 	"log"
 	"math/rand"
+	"mumzic/search"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -19,6 +13,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/net/html"
+	"layeh.com/gumble/gumble"
+	"layeh.com/gumble/gumbleffmpeg"
+	"layeh.com/gumble/gumbleutil"
+	_ "layeh.com/gumble/opus"
 )
 
 var stream *gumbleffmpeg.Stream
@@ -37,10 +38,6 @@ var volumeLevel float32
 var cmdPrefix = "!"
 var maxLines = 10 // Max amount of lines you wish commands to output (before hopefully, going into an unimplemented more buffer)
 
-// Database generated from gendb
-var songdb = "./media.db"
-var maxDBID = getMaxID(songdb)
-
 func main() {
 	files := make(map[string]string)
 
@@ -56,8 +53,7 @@ func main() {
 				key := filepath.Base(file)
 				files[key] = file
 			}
-
-			fmt.Printf("audio player loaded! (%d files)\n", maxDBID)
+			fmt.Printf("audio player loaded! (%d files)\n", search.MaxDBID)
 		},
 		TextMessage: func(e *gumble.TextMessageEvent) {
 			if e.Sender == nil {
@@ -67,7 +63,7 @@ func main() {
 
 			fmt.Println(e.Message)
 
-			playbackControls(e.Client, e.Message, songdb, maxDBID)
+			playbackControls(e.Client, e.Message, search.MaxDBID)
 		},
 	})
 }
@@ -196,10 +192,10 @@ func addToQueue(path string, client *gumble.Client) bool {
 }
 
 func queueID(trackID int) (human string) {
-	if trackID > maxDBID || trackID < 1 {
+	if trackID > search.MaxDBID || trackID < 1 {
 		return ""
 	}
-	path, human := GetTrackById(songdb, trackID)
+	path, human := search.GetTrackById(trackID)
 	if path == "" {
 		return ""
 	}
@@ -221,6 +217,7 @@ func play(path string, client *gumble.Client) {
 	path = removeHtmlTags.ReplaceAllString(path, "")
 	isPlaying = true
 	chanMsg(client, "Now Playing: "+metalist[currentsong])
+	client.Self.SetComment("Now Playing: " + metalist[currentsong])
 	if strings.HasPrefix(path, "http") {
 		playYT(path, client)
 	} else {
@@ -242,6 +239,7 @@ func waitForStop(client *gumble.Client) {
 	switch doNext {
 	case "stop":
 		isPlaying = false
+		client.Self.SetComment("Not Playing.")
 		// Do nothing
 	case "next":
 		if len(songlist) > currentsong+1 {
@@ -290,7 +288,7 @@ func playOnly(client *gumble.Client) {
 	}
 }
 
-func playbackControls(client *gumble.Client, message string, songdb string, maxDBID int) {
+func playbackControls(client *gumble.Client, message string, maxDBID int) {
 	debugPrintln("isPlaying:", isPlaying, "doNext:", doNext)
 	if isCommand(message, cmdPrefix+"play ") {
 		id := lazyRemovePrefix(message, "play ")
@@ -360,7 +358,7 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 	}
 
 	if isCommand(message, cmdPrefix+"search ") {
-		SearchALL(songdb, lazyRemovePrefix(message, "search "), client)
+		search.SearchALL(lazyRemovePrefix(message, "search "), client)
 		return
 	}
 
@@ -413,68 +411,6 @@ func playbackControls(client *gumble.Client, message string, songdb string, maxD
 		debugPrintln(err)
 		return
 	}
-}
-
-// Query SQLite database to count maximum amount of rows, as to not point to non existent ID
-// TODO: Perhaps catch error instead?
-func getMaxID(database string) int {
-	db, err := sql.Open("sqlite3", database)
-	defer db.Close()
-	checkErr(err)
-	var count int
-	err = db.QueryRow("SELECT id FROM music WHERE ID = (SELECT MAX(ID) FROM music);").Scan(&count)
-	checkErr(err)
-	return count
-}
-
-// Query SQLite database to get filepath related to ID
-func GetTrackById(songdb string, trackID int) (filepath, humanout string) {
-	if trackID > maxDBID {
-		return "", ""
-	}
-	db, err := sql.Open("sqlite3", songdb)
-	checkErr(err)
-	defer db.Close()
-	var path, artist, title, album string
-	err = db.QueryRow("select path,artist,title,album from MUSIC where id = ?", trackID).Scan(&path, &artist, &title, &album)
-	if err != nil {
-		if err.Error() == "sql: no rows in result set" {
-			return "", ""
-		}
-	}
-	checkErr(err)
-
-	humanout = artist + " - " + title
-	return path, humanout
-}
-
-func SearchALL(songdb, Query string, client *gumble.Client) {
-	Query = fmt.Sprintf("%%%s%%", Query)
-	rows := makeDbQuery(songdb, "SELECT * FROM music where (artist || \" \" || title)  LIKE ? LIMIT 25", Query)
-	defer rows.Close()
-
-	var id int
-	var artist, album, title, path string
-
-	for rows.Next() {
-		err := rows.Scan(&id, &artist, &album, &title, &path)
-		checkErr(err)
-		chanMsg(client, fmt.Sprintf("#%d | %s - %s (%s)\n", id, artist, title, album))
-	}
-
-	return
-}
-
-// Helper Functions
-func makeDbQuery(songdb, query string, args ...interface{}) *sql.Rows {
-	db, err := sql.Open("sqlite3", songdb)
-	checkErr(err)
-	defer db.Close()
-	rows, err := db.Query(query, args...)
-	checkErr(err)
-
-	// Don't forget to close in function where called.
-	return rows
 }
 
 func debugPrintln(inter ...interface{}) {
