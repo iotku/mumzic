@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	_ "github.com/mattn/go-sqlite3"
 	"layeh.com/gumble/gumble"
 )
 
