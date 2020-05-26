@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"mumzic/search"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -108,6 +110,7 @@ func playYT(url string, client *gumble.Client) {
 		debugPrintln(err)
 	}
 
+	// TODO: Enforce --no-playlist
 	stream = gumbleffmpeg.New(client, gumbleffmpeg.SourceExec("youtube-dl", "-f", "bestaudio", "--rm-cache-dir", "-q", "-o", "-", url))
 	stream.Volume = volumeLevel
 
@@ -155,6 +158,18 @@ func extractTitle(n *html.Node) string {
 	return ""
 }
 
+func getYtdlTitle(url string) string {
+	ytdl := exec.Command("youtube-dl", "-e", url)
+	var output bytes.Buffer
+	ytdl.Stdout = &output
+	err := ytdl.Run
+	if err != nil {
+		log.Println("Youtube-DL failed to get title for", url)
+		return ""
+	}
+	return output.String()
+}
+
 func addToQueue(path string, client *gumble.Client) bool {
 	// For YTDL URLS
 	removeHtmlTags := regexp.MustCompile("<[^>]*>")
@@ -163,7 +178,7 @@ func addToQueue(path string, client *gumble.Client) bool {
 		// add to playlist
 		// Get "Human" from web page title (I hope this doesn't trigger anti-spam...)
 		var human string
-		title := getHtmlTitle(path) // TODO: Remove "- Youtube" and "| Free Listening on SoundCloud" // Handle case where youtube only returns "Youtube"
+		title := getYtdlTitle(path) // TODO: Remove "- Youtube" and "| Free Listening on SoundCloud" // Handle case where youtube only returns "Youtube"
 		debugPrintln("Title:", title)
 		if title != "" {
 			human = title
@@ -270,7 +285,6 @@ func waitForStop(client *gumble.Client) {
 	}
 	isWaiting = false
 	return
-
 }
 
 func playOnly(client *gumble.Client) {
