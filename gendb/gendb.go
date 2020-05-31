@@ -9,11 +9,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	// "time"
 )
 
 var dbfile = "./media.db"
-var lastid = 0
 var processednum = 0
 var errorednum = 0
 var removednum = 0
@@ -60,27 +58,11 @@ func openDB(dbfile string) *sql.DB {
 }
 
 func PrepareStatement(tx *sql.Tx) *sql.Stmt {
-	stmt, err := tx.Prepare(`INSERT INTO "music" (id, artist, album, title, path) VALUES (?, ?, ?, ?, ?);`)
+	stmt, err := tx.Prepare(`INSERT INTO "music" (artist, album, title, path) VALUES (?, ?, ?, ?);`)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return stmt
-}
-
-func execStatement(metadata map[string]string, stmt *sql.Stmt) {
-	_, err := stmt.Exec(lastid, metadata["artist"], metadata["album"], metadata["title"], metadata["path"])
-	if err != nil {
-		// Early return if INSERT fails (hopefully because path already exists)
-		// fmt.Println(err.Error())
-	}
-	return
-}
-
-func addFileToDB(tags map[string]string, stmt *sql.Stmt) {
-	execStatement(tags, stmt)
-	lastid++
-	processednum++
-	printStatus("Added:", tags["path"])
 }
 
 func fullScan(path string, tx *sql.Tx) {
@@ -95,7 +77,7 @@ func fullScan(path string, tx *sql.Tx) {
 			printStatus("Error", err.Error()+" "+path)
 			continue
 		}
-		addFileToDB(tags, stmt)
+		addPathToDB(tags, stmt)
 	}
 }
 
@@ -157,17 +139,20 @@ func compareDatabase(path string, database *sql.DB, tx *sql.Tx) {
 			printStatus("Error", err.Error()+" "+path)
 			continue
 		}
-		addFileToDB(tags, stmt)
+		fmt.Println("Add This", file)
+		addPathToDB(tags, stmt)
 	}
 
 	// remove these
 	filesToRemove := difference(previousFiles, currentFiles)
-
+	// https://github.com/mattn/go-sqlite3/issues/184
+	// And so now I end up in SQL heck
 	for _, file := range filesToRemove {
+		fmt.Println(file)
 		removePathFromDB(file, database)
 	}
 
-	fmt.Printf("\n %d:%d\n", len(currentFiles), len(previousFiles))
+	fmt.Printf("\n%d:%d\n", len(currentFiles), len(previousFiles))
 }
 
 func checkErr(err error) {
@@ -197,13 +182,11 @@ func InitDB(dbfile string) (*sql.Tx, *sql.DB) {
 	       PRAGMA journal_mode = OFF;
 	       PRAGMA wal_autocheckpoint = 16384;
 	       CREATE TABLE IF NOT EXISTS "music" (
-	           "id" INTEGER NOT NULL,
 	           "artist" TEXT NOT NULL,
 	           "album" TEXT NOT NULL,
 	           "title" TEXT NOT NULL,
 	           "path" TEXT NOT NULL
 	       );
-	       CREATE UNIQUE INDEX IF NOT EXISTS "id" ON "music" ("id");
 	       CREATE UNIQUE INDEX IF NOT EXISTS "path" ON "music" ("path");
 	   `
 
@@ -239,6 +222,7 @@ func loadOldFilesList(database *sql.DB) []string {
 	var files []string
 
 	rows, err := database.Query("SELECT path FROM music")
+	//defer rows.Close()
 	checkErr(err)
 
 	var path string
@@ -248,6 +232,17 @@ func loadOldFilesList(database *sql.DB) []string {
 		checkErr(err)
 	}
 	return files
+}
+
+func addPathToDB(metadata map[string]string, stmt *sql.Stmt) {
+	_, err := stmt.Exec(metadata["artist"], metadata["album"], metadata["title"], metadata["path"])
+	if err != nil {
+		// Early return if INSERT fails (hopefully because path already exists)
+		log.Println(err)
+		return
+	}
+	processednum++
+	printStatus("Added", metadata["path"])
 }
 
 func removePathFromDB(path string, database *sql.DB) {
