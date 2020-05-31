@@ -13,7 +13,7 @@ var songdb = "./media.db"
 // Number of rows (not to exceed) in sqlite database
 var MaxDBID = getMaxID(songdb)
 
-// Aggresively fail on error
+// Aggressively fail on error
 func checkErr(err error) {
 	if err != nil {
 		panic(err)
@@ -27,7 +27,7 @@ func getMaxID(database string) int {
 	defer db.Close()
 	checkErr(err)
 	var count int
-	err = db.QueryRow("SELECT id FROM music WHERE ID = (SELECT MAX(ID) FROM music);").Scan(&count)
+	err = db.QueryRow("select count(*) from music;").Scan(&count)
 	checkErr(err)
 	return count
 }
@@ -41,7 +41,7 @@ func GetTrackById(trackID int) (filepath, humanout string) {
 	checkErr(err)
 	defer db.Close()
 	var path, artist, title, album string
-	err = db.QueryRow("select path,artist,title,album from MUSIC where id = ?", trackID).Scan(&path, &artist, &title, &album)
+	err = db.QueryRow("select path,artist,title,album from MUSIC where ROWID = ?", trackID).Scan(&path, &artist, &title, &album)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
 			return "", ""
@@ -55,16 +55,16 @@ func GetTrackById(trackID int) (filepath, humanout string) {
 
 func SearchALL(Query string) []string {
 	Query = fmt.Sprintf("%%%s%%", Query)
-	rows := makeDbQuery(songdb, "SELECT * FROM music where (artist || \" \" || title)  LIKE ? LIMIT 25", Query)
+	rows := makeDbQuery(songdb, "SELECT ROWID, * FROM music where (artist || \" \" || title)  LIKE ? LIMIT 25", Query)
 	defer rows.Close()
 
-	var id int
+	var rowID int
 	var artist, album, title, path string
 	var output []string
 	for rows.Next() {
-		err := rows.Scan(&id, &artist, &album, &title, &path)
+		err := rows.Scan(&rowID, &artist, &album, &title, &path)
 		checkErr(err)
-		output = append(output, fmt.Sprintf("#%d | %s - %s (%s)", id, artist, title, album))
+		output = append(output, fmt.Sprintf("#%d | %s - %s (%s)", rowID, artist, title, album))
 	}
 
 	return output

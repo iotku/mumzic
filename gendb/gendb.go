@@ -145,8 +145,7 @@ func compareDatabase(path string, database *sql.DB, tx *sql.Tx) {
 
 	// remove these
 	filesToRemove := difference(previousFiles, currentFiles)
-	// https://github.com/mattn/go-sqlite3/issues/184
-	// And so now I end up in SQL heck
+
 	for _, file := range filesToRemove {
 		fmt.Println(file)
 		removePathFromDB(file, database)
