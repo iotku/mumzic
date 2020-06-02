@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"mumzic/search"
+	"github.com/iotku/mumzic/search"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,7 +14,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 	_ "github.com/mattn/go-sqlite3"
 	"layeh.com/gumble/gumble"
 	"layeh.com/gumble/gumbleffmpeg"
