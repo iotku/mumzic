@@ -1,5 +1,5 @@
 # mumzic
-Music Bot for mumble servers
+Music Bot for mumble servers, can play youtube/soundcloud or local files.
 WIP
 
 ## Getting Started
