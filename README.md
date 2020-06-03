@@ -2,6 +2,26 @@
 Music Bot for mumble servers
 WIP
 
+## Getting Started
+
+### Building
+Base Reqirements: go / ffmpeg / youtube-dl / sqlite3
+
+`$ go get github.com/iotku/mumzic/`
+
+You can then either `go build` or `go install`
+
+### Running
+
+`mumzic -insecure -server [hostname or ip]`
+
+For additional options (such as setting the **username** or **password**), see `mumzic -help`
+
+Note: Here we used the `-insecure` flag, to (hopefully) avoid the pain that comes with setting up certificates
+
+### Usage / Commands
+See [usage.md](https://github.com/iotku/mumzic/blob/master/USAGE.md)
+
 ## Progress
 ### Sources
 * ✅ Local Files (Paths stored in sqlite database)
