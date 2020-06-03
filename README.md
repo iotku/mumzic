@@ -22,16 +22,5 @@ Note: Here we used the `-insecure` flag, to (hopefully) avoid the pain that come
 ### Usage / Commands
 See [usage.md](https://github.com/iotku/mumzic/blob/master/USAGE.md)
 
-## Progress
-### Sources
-* ✅ Local Files (Paths stored in sqlite database)
-* ✅ Youtube / Soundcloud / etc
-
-### Features
-* ✅ Playback Control
-* ✅ Volume Control
-* ✅ Playlist / Autoplay
-* ❌ Search
-
 ## Known Mumble Limitations (Not my fault, for once.)
 * No stereo audio (See https://github.com/mumble-voip/mumble/issues/2829)
