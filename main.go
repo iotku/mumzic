@@ -44,8 +44,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage of %s: [flags]\n", os.Args[0])
 		flag.PrintDefaults()
 	}
-	volumeLevel = 0.25 // Default volume level
 
+	// init some terrible global variables which should be dealt with later
+	volumeLevel = 0.25 // Default volume level
+	msgBurstCount = 0
+	msgLastSentTime = time.Now()
+
+	// Start main gumble loop
 	gumbleutil.Main(gumbleutil.AutoBitrate, gumbleutil.Listener{
 		Connect: func(e *gumble.ConnectEvent) {
 			for _, file := range flag.Args() {
@@ -124,8 +129,31 @@ func playYT(url string, client *gumble.Client) {
 
 }
 
+var msgBurstCount uint
+var msgLastSentTime time.Time
+
 // Sends Message to current mumble channel
-func chanMsg(client *gumble.Client, msg string) { client.Self.Channel.Send(msg, false) }
+func chanMsg(client *gumble.Client, msg string) {
+	// Mumble servers often have rate limiting which should be accounted for
+	// Messages sent too fast will be dropped!
+	// Murmur default: Burst = 5, MessageLimit (after burst) 1/sec
+
+	// Buffering logic to avoid messages being dropped by sending too fast
+	// This is probably something appropriate to use channels for.
+
+	currentTime := time.Now()
+	if msgLastSentTime.Add(5 * time.Second).Before(currentTime) {
+		msgBurstCount = 1
+	} else {
+		msgBurstCount++
+	}
+
+	if msgBurstCount >= 5 {
+		time.Sleep(1 * time.Second)
+	}
+	client.Self.Channel.Send(msg, false)
+	msgLastSentTime = currentTime
+}
 
 func queueYT(url, human string) string {
 	// TODO Check with API if video is valid for youtube links
@@ -314,18 +342,12 @@ func playbackControls(client *gumble.Client, message string, maxDBID int) bool {
 		amount := len(songlist) - current
 
 		// Try poorly to avoid messages being dropped by mumble server for sending too fast
-		var throttle bool
 		if amount > maxLines {
 			amount = maxLines
-			throttle = true
 		}
 
 		for i := 0; i < amount; i++ {
 			chanMsg(client, fmt.Sprintf("# %d: %s\n", i, metalist[current+i]))
-			if throttle && i > 4 {
-				time.Sleep(150 * time.Millisecond)
-			}
-
 		}
 
 		chanMsg(client, fmt.Sprintf("%d Track(s) Queued.\n", len(songlist)-current))
@@ -381,7 +403,7 @@ func playbackControls(client *gumble.Client, message string, maxDBID int) bool {
 		debugPrintln(err)
 		return true
 	}
-    return false
+	return false
 }
 
 func searchCommands(client *gumble.Client, message string, maxDBID int) bool {
@@ -416,7 +438,7 @@ func searchCommands(client *gumble.Client, message string, maxDBID int) bool {
 		return true
 	}
 
-    return false
+	return false
 }
 
 func debugPrintln(inter ...interface{}) {
