@@ -4,9 +4,14 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"github.com/iotku/mumzic/search"
+	_ "github.com/mattn/go-sqlite3"
+	"layeh.com/gumble/gumble"
+	"layeh.com/gumble/gumbleffmpeg"
+	"layeh.com/gumble/gumbleutil"
+	_ "layeh.com/gumble/opus"
 	"log"
 	"math/rand"
-	"github.com/iotku/mumzic/search"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,11 +19,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	_ "github.com/mattn/go-sqlite3"
-	"layeh.com/gumble/gumble"
-	"layeh.com/gumble/gumbleffmpeg"
-	"layeh.com/gumble/gumbleutil"
-	_ "layeh.com/gumble/opus"
 )
 
 var stream *gumbleffmpeg.Stream
@@ -41,7 +41,7 @@ func main() {
 	files := make(map[string]string)
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s: [flags] [audio files...]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage of %s: [flags]\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 	volumeLevel = 0.25 // Default volume level
@@ -62,7 +62,14 @@ func main() {
 
 			fmt.Println(e.Message)
 
-			playbackControls(e.Client, e.Message, search.MaxDBID)
+			match := playbackControls(e.Client, e.Message, search.MaxDBID)
+
+			// probably a pointless optimization, but avoid checking for search command if playback Control was a match
+			if match == true {
+				return
+			}
+
+			searchCommands(e.Client, e.Message, search.MaxDBID)
 		},
 	})
 }
@@ -276,7 +283,7 @@ func playOnly(client *gumble.Client) {
 	}
 }
 
-func playbackControls(client *gumble.Client, message string, maxDBID int) {
+func playbackControls(client *gumble.Client, message string, maxDBID int) bool {
 	debugPrintln("isPlaying:", isPlaying, "doNext:", doNext)
 	if isCommand(message, cmdPrefix+"play ") {
 		id := lazyRemovePrefix(message, "play ")
@@ -294,12 +301,12 @@ func playbackControls(client *gumble.Client, message string, maxDBID int) {
 			doNext = "next"
 			playOnly(client)
 		}
-		return
+		return true
 	}
 
 	if isCommand(message, cmdPrefix+"play") {
 		playOnly(client)
-		return
+		return true
 	}
 
 	if isCommand(message, cmdPrefix+"list") {
@@ -322,40 +329,12 @@ func playbackControls(client *gumble.Client, message string, maxDBID int) {
 		}
 
 		chanMsg(client, fmt.Sprintf("%d Track(s) Queued.\n", len(songlist)-current))
-		return
-	}
-
-	if isCommand(message, cmdPrefix+"rand") {
-		howMany := lazyRemovePrefix(message, "rand")
-		value, err := strconv.Atoi(howMany)
-		if err != nil {
-			return
-		}
-		seed := rand.NewSource(time.Now().UnixNano())
-		randsrc := rand.New(seed)
-
-		if value > maxLines {
-			value = maxLines
-		}
-		for i := 0; i < value; i++ {
-			id := randsrc.Intn(maxDBID)
-			addToQueue(strconv.Itoa(id), client)
-		}
-
-		return
-	}
-
-	if isCommand(message, cmdPrefix+"search ") {
-		results := search.SearchALL(lazyRemovePrefix(message, "search "))
-		for _, v := range results {
-			chanMsg(client, v)
-		}
-		return
+		return true
 	}
 
 	// If stream object doesn't exist yet, don't do anything to avoid dereference
 	if stream == nil {
-		return
+		return false
 	}
 
 	// Stop Playback
@@ -365,7 +344,7 @@ func playbackControls(client *gumble.Client, message string, maxDBID int) {
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		return
+		return true
 	}
 
 	// Set volume
@@ -384,7 +363,7 @@ func playbackControls(client *gumble.Client, message string, maxDBID int) {
 	// Send current volume to channel
 	if isCommand(message, cmdPrefix+"vol") {
 		chanMsg(client, "Current Volume: "+fmt.Sprintf("%f", stream.Volume))
-		return
+		return true
 	}
 
 	// Skip to next track in playlist
@@ -400,8 +379,44 @@ func playbackControls(client *gumble.Client, message string, maxDBID int) {
 		doNext = "skip"
 		err = stream.Stop()
 		debugPrintln(err)
-		return
+		return true
 	}
+    return false
+}
+
+func searchCommands(client *gumble.Client, message string, maxDBID int) bool {
+	if maxDBID == 0 {
+		return true
+	} // Don't perform any database related commands if the database doesn't exist (or contains no rows)
+	if isCommand(message, cmdPrefix+"rand") {
+		howMany := lazyRemovePrefix(message, "rand")
+		value, err := strconv.Atoi(howMany)
+		if err != nil {
+			return true
+		}
+		seed := rand.NewSource(time.Now().UnixNano())
+		randsrc := rand.New(seed)
+
+		if value > maxLines {
+			value = maxLines
+		}
+		for i := 0; i < value; i++ {
+			id := randsrc.Intn(maxDBID)
+			addToQueue(strconv.Itoa(id), client)
+		}
+
+		return true
+	}
+
+	if isCommand(message, cmdPrefix+"search ") {
+		results := search.SearchALL(lazyRemovePrefix(message, "search "))
+		for _, v := range results {
+			chanMsg(client, v)
+		}
+		return true
+	}
+
+    return false
 }
 
 func debugPrintln(inter ...interface{}) {

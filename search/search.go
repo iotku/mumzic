@@ -3,15 +3,22 @@ package search
 import (
 	"database/sql"
 	"fmt"
-
 	_ "github.com/mattn/go-sqlite3"
+	"os"
 )
 
 // Database generated from gendb
 var songdb = "./media.db"
+var MaxDBID int
 
-// Number of rows (not to exceed) in sqlite database
-var MaxDBID = getMaxID(songdb)
+func init() {
+	if _, err := os.Stat(songdb); os.IsNotExist(err) {
+		MaxDBID = 0
+	} else {
+		// Number of rows (not to exceed) in sqlite database
+		MaxDBID = getMaxID(songdb)
+	}
+}
 
 // Aggressively fail on error
 func checkErr(err error) {
