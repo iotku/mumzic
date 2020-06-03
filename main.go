@@ -35,7 +35,7 @@ var skipBy = 1
 // Eventually allow these to be grabbed from configuration file
 var volumeLevel float32
 var cmdPrefix = "!"
-var maxLines = 10 // Max amount of lines you wish commands to output (before hopefully, going into an unimplemented more buffer)
+var maxLines = 5 // Max amount of lines you wish commands to output (before hopefully, going into an unimplemented more buffer)
 
 func main() {
 	files := make(map[string]string)
@@ -432,8 +432,11 @@ func searchCommands(client *gumble.Client, message string, maxDBID int) bool {
 
 	if isCommand(message, cmdPrefix+"search ") {
 		results := search.SearchALL(lazyRemovePrefix(message, "search "))
-		for _, v := range results {
+		for i, v := range results {
 			chanMsg(client, v)
+			if i == maxLines { // TODO, Send extra results into 'more' buffer
+				break
+			}
 		}
 		return true
 	}
