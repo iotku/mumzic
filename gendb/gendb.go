@@ -57,7 +57,7 @@ func openDB(dbfile string) *sql.DB {
 	return database
 }
 
-func PrepareStatement(tx *sql.Tx) *sql.Stmt {
+func PrepareStatementInsert(tx *sql.Tx) *sql.Stmt {
 	stmt, err := tx.Prepare(`INSERT INTO "music" (artist, album, title, path) VALUES (?, ?, ?, ?);`)
 	if err != nil {
 		log.Fatal(err)
@@ -65,8 +65,16 @@ func PrepareStatement(tx *sql.Tx) *sql.Stmt {
 	return stmt
 }
 
+func PrepareStatementRemove(tx *sql.Tx) *sql.Stmt {
+	stmt, err := tx.Prepare(`DELETE FROM music WHERE path = ?`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return stmt
+}
+
 func fullScan(path string, tx *sql.Tx) {
-	stmt := PrepareStatement(tx)
+	stmt := PrepareStatementInsert(tx)
 	defer stmt.Close()
 
 	currentFiles := scanFiles(path)
@@ -120,7 +128,7 @@ func getTags(path string) (map[string]string, error) {
 }
 
 func compareDatabase(path string, database *sql.DB, tx *sql.Tx) {
-	stmt := PrepareStatement(tx)
+	stmt := PrepareStatementInsert(tx)
 	defer stmt.Close()
 
 	// Is there a good way to do the comparison during the scan?
@@ -139,16 +147,16 @@ func compareDatabase(path string, database *sql.DB, tx *sql.Tx) {
 			printStatus("Error", err.Error()+" "+path)
 			continue
 		}
-		fmt.Println("Add This", file)
 		addPathToDB(tags, stmt)
 	}
 
 	// remove these
+	stmt = PrepareStatementRemove(tx)
 	filesToRemove := difference(previousFiles, currentFiles)
 
 	for _, file := range filesToRemove {
 		fmt.Println(file)
-		removePathFromDB(file, database)
+		removePathFromDB(file, stmt)
 	}
 
 	fmt.Printf("\n%d:%d\n", len(currentFiles), len(previousFiles))
@@ -244,16 +252,9 @@ func addPathToDB(metadata map[string]string, stmt *sql.Stmt) {
 	printStatus("Added", metadata["path"])
 }
 
-func removePathFromDB(path string, database *sql.DB) {
-	stmt, err := database.Prepare(`DELETE FROM music WHERE path = ?`)
+func removePathFromDB(path string, stmt *sql.Stmt) {
+	_, err := stmt.Exec(path)
 	if err != nil {
-		log.Fatal(err)
-	}
-	// fmt.Println(lastid)
-	_, err = stmt.Exec(path)
-	if err != nil {
-		// Early return if INSERT fails (hopefully because path already exists)
-		// fmt.Println(err.Error())
 		fmt.Println(err.Error())
 		return
 	}
