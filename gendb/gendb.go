@@ -144,7 +144,7 @@ func compareDatabase(path string, database *sql.DB, tx *sql.Tx) {
 		tags, err := getTags(file)
 		if tags == nil {
 			errorednum++
-			printStatus("Error", err.Error()+" "+path)
+			printStatus("Error", err.Error()+" "+file)
 			continue
 		}
 		addPathToDB(tags, stmt)
