@@ -95,7 +95,8 @@ func playFile(path string, client *gumble.Client) {
 }
 
 func isWhiteListedURL(url string) bool {
-	whiteListedURLS := []string{"https://www.youtube.com/", "https://music.youtube.com", "https://youtu.be/", "https://soundcloud.com/"}
+	// ! Don't forget to end url with / !
+	whiteListedURLS := []string{"https://www.youtube.com/", "https://music.youtube.com/", "https://youtu.be/", "https://soundcloud.com/"}
 	for i := range whiteListedURLS {
 		if strings.HasPrefix(url, whiteListedURLS[i]) {
 			return true
