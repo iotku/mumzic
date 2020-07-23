@@ -1,0 +1,176 @@
+package commands
+
+import (
+	"fmt"
+	"github.com/iotku/mumzic/config"
+	"github.com/iotku/mumzic/helper"
+	"github.com/iotku/mumzic/playback"
+	"github.com/iotku/mumzic/playlist"
+	"github.com/iotku/mumzic/search"
+	"layeh.com/gumble/gumble"
+	"log"
+	"math/rand"
+	"strconv"
+	"strings"
+	"time"
+)
+
+func playOnly(client *gumble.Client) {
+	// Skip Current track for frequent cases where you've just queued a new track and want to start
+	if playback.IsPlaying == false && len(playlist.Songlist) == playlist.Currentsong+2 {
+		playlist.Currentsong = playlist.Currentsong + 1
+		playback.Play(playlist.Songlist[playlist.Currentsong], client)
+		playback.DoNext = "next"
+	} else if len(playlist.Songlist) > 0 && playback.IsPlaying == false {
+		// if Stream and Songlist exists
+		playback.Play(playlist.Songlist[playlist.Currentsong], client)
+		playback.DoNext = "next"
+	} else if playback.Stream == nil {
+		// Do nothing if nothing is queued
+	}
+}
+
+func PlaybackControls(client *gumble.Client, message string) bool {
+	helper.DebugPrintln("IsPlaying:", playback.IsPlaying, "DoNext:", playback.DoNext)
+	if isCommand(message, "play ") {
+		id := helper.LazyRemovePrefix(message, "play ")
+		if id != "" && len(playlist.Songlist) == 0 {
+			// Add to queue then start playing queue
+			queued := playlist.AddToQueue(id, client)
+			if queued == true {
+				playback.Play(playlist.Songlist[playlist.Currentsong], client)
+				playback.DoNext = "next"
+			}
+		} else if id == "" {
+			playOnly(client)
+		} else {
+			playlist.AddToQueue(id, client)
+			playback.DoNext = "next"
+			playOnly(client)
+		}
+		return true
+	}
+
+	if isCommand(message, "play") {
+		playOnly(client)
+		return true
+	}
+
+	if isCommand(message, "list") {
+		current := playlist.Currentsong
+		amount := len(playlist.Songlist) - current
+
+		// Try poorly to avoid messages being dropped by mumble server for sending too fast
+		if amount > config.MaxLines {
+			amount = config.MaxLines
+		}
+
+		for i := 0; i < amount; i++ {
+			helper.ChanMsg(client, fmt.Sprintf("# %d: %s\n", i, playlist.Metalist[current+i]))
+		}
+
+		helper.ChanMsg(client, fmt.Sprintf("%d Track(s) Queued.\n", len(playlist.Songlist)-current))
+		return true
+	}
+
+	// If Stream object doesn't exist yet, don't do anything to avoid dereference
+	if playback.Stream == nil {
+		return false
+	}
+
+	// Stop Playback
+	if isCommand(message, "stop") {
+		playback.DoNext = "stop"
+		err := playback.Stream.Stop()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		return true
+	}
+
+	// Set volume
+	// At some point consider switching to percentage based system
+	if isCommand(message, "vol ") || isCommand(message, config.CmdPrefix+"volume ") {
+		message = "." + helper.LazyRemovePrefix(message, "vol")
+		value, err := strconv.ParseFloat(message, 32)
+
+		if err == nil {
+			fmt.Printf("%f", value)
+			config.VolumeLevel = float32(value)
+			playback.Stream.Volume = float32(value)
+		}
+	}
+
+	// Send current volume to channel
+	if isCommand(message, "vol") {
+		helper.ChanMsg(client, "Current Volume: "+fmt.Sprintf("%f", playback.Stream.Volume))
+		return true
+	}
+
+	// Skip to next track in playlist
+	if isCommand(message, "skip") {
+		howMany := helper.LazyRemovePrefix(message, "skip")
+		value, err := strconv.Atoi(howMany)
+		if err != nil {
+			log.Println(err)
+			playback.SkipBy = 1
+		} else {
+			playback.SkipBy = value
+		}
+		playback.DoNext = "skip"
+		err = playback.Stream.Stop()
+		helper.DebugPrintln(err)
+		return true
+	}
+	return false
+}
+
+func SearchCommands(client *gumble.Client, message string) bool {
+	if search.MaxDBID == 0 {
+		return true
+	} // Don't perform any database related commands if the database doesn't exist (or contains no rows)
+	if isCommand(message, "rand") {
+		howMany := helper.LazyRemovePrefix(message, "rand")
+		value, err := strconv.Atoi(howMany)
+		if err != nil {
+			return true
+		}
+		seed := rand.NewSource(time.Now().UnixNano())
+		randsrc := rand.New(seed)
+
+		if value > config.MaxLines {
+			value = config.MaxLines
+		}
+		for i := 0; i < value; i++ {
+			id := randsrc.Intn(search.MaxDBID)
+			playlist.AddToQueue(strconv.Itoa(id), client)
+		}
+
+		return true
+	}
+
+	if isCommand(message, "search ") {
+		results := search.SearchALL(helper.LazyRemovePrefix(message, "search "))
+		for i, v := range results {
+			helper.ChanMsg(client, v)
+			if i == config.MaxLines { // TODO, Send extra results into 'more' buffer
+				break
+			}
+		}
+		return true
+	}
+
+	return false
+}
+
+func isCommand(message, command string) bool {
+	message = strings.ToLower(message)
+	command = strings.ToLower(command)
+	isCommand := strings.HasPrefix(message, config.CmdPrefix+command)
+	if isCommand {
+		helper.DebugPrintln("Command: ", command, "Message:", message)
+	} else {
+		//helper.DebugPrintln("Not Command:", command, "Is actually", message, "Where cmd prefix is", config.CmdPrefix)
+	}
+	return isCommand
+}
