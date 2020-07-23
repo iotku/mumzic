@@ -3,25 +3,24 @@ package search
 import (
 	"database/sql"
 	"fmt"
+	"github.com/iotku/mumzic/config"
 	_ "github.com/mattn/go-sqlite3"
 	"os"
 )
 
-// Database generated from gendb
-var songdb = "./media.db"
 var MaxDBID int
 
 func init() {
-	if _, err := os.Stat(songdb); os.IsNotExist(err) {
+	if _, err := os.Stat(config.Songdb); os.IsNotExist(err) {
 		MaxDBID = 0
 	} else {
 		// Number of rows (not to exceed) in sqlite database
-		MaxDBID = getMaxID(songdb)
+		MaxDBID = getMaxID(config.Songdb)
 	}
 }
 
 // Aggressively fail on error
-func checkErr(err error) {
+func checkErrPanic(err error) {
 	if err != nil {
 		panic(err)
 	}
@@ -32,10 +31,10 @@ func checkErr(err error) {
 func getMaxID(database string) int {
 	db, err := sql.Open("sqlite3", database)
 	defer db.Close()
-	checkErr(err)
+	checkErrPanic(err)
 	var count int
 	err = db.QueryRow("select count(*) from music;").Scan(&count)
-	checkErr(err)
+	checkErrPanic(err)
 	return count
 }
 
@@ -44,8 +43,8 @@ func GetTrackById(trackID int) (filepath, humanout string) {
 	if trackID > MaxDBID {
 		return "", ""
 	}
-	db, err := sql.Open("sqlite3", songdb)
-	checkErr(err)
+	db, err := sql.Open("sqlite3", config.Songdb)
+	checkErrPanic(err)
 	defer db.Close()
 	var path, artist, title, album string
 	err = db.QueryRow("select path,artist,title,album from MUSIC where ROWID = ?", trackID).Scan(&path, &artist, &title, &album)
@@ -54,7 +53,7 @@ func GetTrackById(trackID int) (filepath, humanout string) {
 			return "", ""
 		}
 	}
-	checkErr(err)
+	checkErrPanic(err)
 
 	humanout = artist + " - " + title
 	return path, humanout
@@ -62,7 +61,7 @@ func GetTrackById(trackID int) (filepath, humanout string) {
 
 func SearchALL(Query string) []string {
 	Query = fmt.Sprintf("%%%s%%", Query)
-	rows := makeDbQuery(songdb, "SELECT ROWID, * FROM music where (artist || \" \" || title)  LIKE ? LIMIT 25", Query)
+	rows := makeDbQuery(config.Songdb, "SELECT ROWID, * FROM music where (artist || \" \" || title)  LIKE ? LIMIT 25", Query)
 	defer rows.Close()
 
 	var rowID int
@@ -70,7 +69,7 @@ func SearchALL(Query string) []string {
 	var output []string
 	for rows.Next() {
 		err := rows.Scan(&rowID, &artist, &album, &title, &path)
-		checkErr(err)
+		checkErrPanic(err)
 		output = append(output, fmt.Sprintf("#%d | %s - %s (%s)", rowID, artist, title, album))
 	}
 
@@ -80,10 +79,10 @@ func SearchALL(Query string) []string {
 // Helper Functions
 func makeDbQuery(songdb, query string, args ...interface{}) *sql.Rows {
 	db, err := sql.Open("sqlite3", songdb)
-	checkErr(err)
+	checkErrPanic(err)
 	defer db.Close()
 	rows, err := db.Query(query, args...)
-	checkErr(err)
+	checkErrPanic(err)
 
 	// Don't forget to close in function where called.
 	return rows
