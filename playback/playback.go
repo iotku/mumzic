@@ -1,7 +1,6 @@
 package playback
 
 import (
-	"fmt"
 	"github.com/iotku/mumzic/config"
 	"github.com/iotku/mumzic/helper"
 	"github.com/iotku/mumzic/playlist"
@@ -10,7 +9,6 @@ import (
 	"layeh.com/gumble/gumbleffmpeg"
 	_ "layeh.com/gumble/opus"
 	"strings"
-	"time"
 )
 
 var Stream *gumbleffmpeg.Stream
@@ -124,18 +122,4 @@ func PlayYT(url string, client *gumble.Client) {
 	} else {
 		helper.DebugPrintln("Playing:", url)
 	}
-
-	ticker := time.NewTicker(100 * time.Millisecond)
-	done := make(chan bool)
-
-	go func() {
-		for {
-			select {
-			case <-done:
-				return
-			case t := <-ticker.C:
-				fmt.Println("Tick at", t, Stream.Elapsed())
-			}
-		}
-	}()
 }
