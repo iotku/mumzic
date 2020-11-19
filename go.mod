@@ -1,0 +1,8 @@
+module github.com/iotku/mumzic
+
+go 1.15
+
+require (
+	github.com/mattn/go-sqlite3 v1.14.5
+	layeh.com/gumble v0.0.0-20200818122324-146f9205029b
+)
