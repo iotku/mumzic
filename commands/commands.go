@@ -2,17 +2,18 @@ package commands
 
 import (
 	"fmt"
+	"log"
+	"math/rand"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/iotku/mumzic/config"
 	"github.com/iotku/mumzic/helper"
 	"github.com/iotku/mumzic/playback"
 	"github.com/iotku/mumzic/playlist"
 	"github.com/iotku/mumzic/search"
 	"layeh.com/gumble/gumble"
-	"log"
-	"math/rand"
-	"strconv"
-	"strings"
-	"time"
 )
 
 func playOnly(client *gumble.Client) {
@@ -30,13 +31,13 @@ func playOnly(client *gumble.Client) {
 	}
 }
 
-func PlaybackControls(client *gumble.Client, message string) bool {
+func PlaybackControls(client *gumble.Client, message string, isPrivate bool, sender string) bool {
 	helper.DebugPrintln("IsPlaying:", playback.IsPlaying, "DoNext:", playback.DoNext)
 	if isCommand(message, "play ") {
 		id := helper.LazyRemovePrefix(message, "play ")
 		if id != "" && len(playlist.Songlist) == 0 {
 			// Add to queue then start playing queue
-			queued := playlist.AddToQueue(id, client)
+			queued := playlist.AddToQueue(isPrivate, sender, id, client)
 			if queued == true {
 				playback.Play(playlist.Songlist[playlist.Currentsong], client)
 				playback.DoNext = "next"
@@ -44,7 +45,7 @@ func PlaybackControls(client *gumble.Client, message string) bool {
 		} else if id == "" {
 			playOnly(client)
 		} else {
-			playlist.AddToQueue(id, client)
+			playlist.AddToQueue(isPrivate, sender, id, client)
 			playback.DoNext = "next"
 			playOnly(client)
 		}
@@ -66,10 +67,10 @@ func PlaybackControls(client *gumble.Client, message string) bool {
 		}
 
 		for i := 0; i < amount; i++ {
-			helper.ChanMsg(client, fmt.Sprintf("# %d: %s\n", i, playlist.Metalist[current+i]))
+			helper.MsgDispatch(isPrivate, sender, client, fmt.Sprintf("# %d: %s\n", i, playlist.Metalist[current+i]))
 		}
 
-		helper.ChanMsg(client, fmt.Sprintf("%d Track(s) Queued.\n", len(playlist.Songlist)-current))
+		helper.MsgDispatch(isPrivate, sender, client, fmt.Sprintf("%d Track(s) Queued.\n", len(playlist.Songlist)-current))
 		return true
 	}
 
@@ -103,7 +104,7 @@ func PlaybackControls(client *gumble.Client, message string) bool {
 
 	// Send current volume to channel
 	if isCommand(message, "vol") {
-		helper.ChanMsg(client, "Current Volume: "+fmt.Sprintf("%f", playback.Stream.Volume))
+		helper.MsgDispatch(isPrivate, sender, client, "Current Volume: "+fmt.Sprintf("%f", playback.Stream.Volume))
 		return true
 	}
 
@@ -125,7 +126,7 @@ func PlaybackControls(client *gumble.Client, message string) bool {
 	return false
 }
 
-func SearchCommands(client *gumble.Client, message string) bool {
+func SearchCommands(client *gumble.Client, message string, isPrivate bool, sender string) bool {
 	if search.MaxDBID == 0 {
 		return true
 	} // Don't perform any database related commands if the database doesn't exist (or contains no rows)
@@ -143,7 +144,7 @@ func SearchCommands(client *gumble.Client, message string) bool {
 		}
 		for i := 0; i < value; i++ {
 			id := randsrc.Intn(search.MaxDBID)
-			playlist.AddToQueue(strconv.Itoa(id), client)
+			playlist.AddToQueue(isPrivate, sender, strconv.Itoa(id), client)
 		}
 
 		return true
@@ -152,7 +153,7 @@ func SearchCommands(client *gumble.Client, message string) bool {
 	if isCommand(message, "search ") {
 		results := search.SearchALL(helper.LazyRemovePrefix(message, "search "))
 		for i, v := range results {
-			helper.ChanMsg(client, v)
+			helper.MsgDispatch(isPrivate, sender, client, v)
 			if i == config.MaxLines { // TODO, Send extra results into 'more' buffer
 				break
 			}

@@ -1,12 +1,13 @@
 package playlist
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/iotku/mumzic/helper"
 	"github.com/iotku/mumzic/search"
 	"github.com/iotku/mumzic/youtubedl"
 	"layeh.com/gumble/gumble"
-	"strconv"
-	"strings"
 )
 
 // Playlist elements
@@ -37,7 +38,7 @@ func QueueYT(url, human string) string {
 	return human
 }
 
-func AddToQueue(path string, client *gumble.Client) bool {
+func AddToQueue(isPrivate bool, sender string, path string, client *gumble.Client) bool {
 	// For YTDL URLS
 	path = helper.StripHTMLTags(path)
 	if strings.HasPrefix(path, "http") && youtubedl.IsWhiteListedURL(path) == true {
@@ -52,11 +53,10 @@ func AddToQueue(path string, client *gumble.Client) bool {
 			human = path
 		}
 		QueueYT(path, human)
-		helper.ChanMsg(client, "Added: "+human)
+		helper.MsgDispatch(isPrivate, sender, client, "Added: "+human)
 		return true
 	} else if strings.HasPrefix(path, "http") == true {
-		helper.ChanMsg(client, "URL Doesn't meet whitelist, sorry.")
-		// Don't do anything
+		helper.MsgDispatch(isPrivate, sender, client, "URL Doesn't meet whitelist, sorry.")
 		return false
 	}
 
@@ -64,10 +64,10 @@ func AddToQueue(path string, client *gumble.Client) bool {
 	idn, _ := strconv.Atoi(path)
 	human := QueueID(idn)
 	if human != "" {
-		helper.ChanMsg(client, "Added: "+human)
+		helper.MsgDispatch(isPrivate, sender, client, "Added: "+human)
 		return true
 	}
 
-	helper.ChanMsg(client, "Nothing added.")
+	helper.MsgDispatch(isPrivate, sender, client, "Nothing added. (Invalid ID?)")
 	return false
 }

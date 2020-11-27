@@ -3,13 +3,18 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/iotku/mumzic/commands"
+	"github.com/iotku/mumzic/config"
+	"github.com/iotku/mumzic/helper"
 	"github.com/iotku/mumzic/search"
 	_ "github.com/mattn/go-sqlite3"
 	"layeh.com/gumble/gumble"
 	"layeh.com/gumble/gumbleutil"
-	"os"
-	"path/filepath"
 )
 
 func main() {
@@ -34,15 +39,31 @@ func main() {
 				return
 			}
 
-			fmt.Println(e.Message)
-			match := commands.PlaybackControls(e.Client, e.Message)
+			var isPrivate bool // Was message sent privately?
 
-			// probably a pointless optimization, but avoid checking for search command if playback Control was a match
-			if match == true {
-				return
+			if len(e.TextMessage.Channels) == 0 {
+				// Direct Message
+				log.Printf("DMSG (%s): %s", e.Sender.Name, e.Message)
+				if e.Message == "Ping" {
+					helper.UserMsg(e.Client, e.Sender.Name, "Pong")
+				}
+				isPrivate = true
+			} else {
+				// Channel Message
+				log.Printf("CMSG (%s) %s: %s", e.Sender.Channel.Name, e.Sender.Name, e.Message)
+				isPrivate = false
 			}
 
-			commands.SearchCommands(e.Client, e.Message)
+			if strings.HasPrefix(e.Message, e.Client.Self.Name) || strings.HasPrefix(e.Message, config.CmdPrefix) {
+				match := commands.PlaybackControls(e.Client, e.Message, isPrivate, e.Sender.Name)
+
+				// probably a pointless optimization, but avoid checking for search command if playback Control was a match
+				if match == true {
+					return
+				}
+
+				commands.SearchCommands(e.Client, e.Message, isPrivate, e.Sender.Name)
+			}
 		},
 	})
 }

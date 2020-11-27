@@ -1,6 +1,9 @@
 package playback
 
 import (
+	"log"
+	"strings"
+
 	"github.com/iotku/mumzic/config"
 	"github.com/iotku/mumzic/helper"
 	"github.com/iotku/mumzic/playlist"
@@ -8,7 +11,6 @@ import (
 	"layeh.com/gumble/gumble"
 	"layeh.com/gumble/gumbleffmpeg"
 	_ "layeh.com/gumble/opus"
-	"strings"
 )
 
 var Stream *gumbleffmpeg.Stream
@@ -105,7 +107,7 @@ func PlayFile(path string, client *gumble.Client) {
 func PlayYT(url string, client *gumble.Client) {
 	url = helper.StripHTMLTags(url)
 	if youtubedl.IsWhiteListedURL(url) == false {
-		helper.ChanMsg(client, "URL Doesn't meet whitelist, sorry.")
+		log.Printf("PlayYT Failed: URL %s Doesn't meet whitelist", url)
 		return
 	}
 

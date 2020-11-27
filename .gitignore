@@ -3,3 +3,4 @@
 *.db
 mumzic*
 **.exe
+gendb/gendb
