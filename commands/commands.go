@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -113,7 +112,8 @@ func PlaybackControls(client *gumble.Client, message string, isPrivate bool, sen
 		howMany := helper.LazyRemovePrefix(message, "skip")
 		value, err := strconv.Atoi(howMany)
 		if err != nil {
-			log.Println(err)
+			// If this isn't a proper value Atoi returns and error, probably harmless but maybe not smart.
+			//log.Println(err)
 			playback.SkipBy = 1
 		} else {
 			playback.SkipBy = value
@@ -167,11 +167,11 @@ func SearchCommands(client *gumble.Client, message string, isPrivate bool, sende
 func isCommand(message, command string) bool {
 	message = strings.ToLower(message)
 	command = strings.ToLower(command)
-	isCommand := strings.HasPrefix(message, config.CmdPrefix+command)
-	if isCommand {
+	if strings.HasPrefix(message, config.CmdPrefix+command) || strings.HasPrefix(message, helper.BotUsername+" "+command) {
 		helper.DebugPrintln("Command: ", command, "Message:", message)
+		return true
 	} else {
 		//helper.DebugPrintln("Not Command:", command, "Is actually", message, "Where cmd prefix is", config.CmdPrefix)
+		return false
 	}
-	return isCommand
 }

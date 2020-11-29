@@ -14,6 +14,9 @@ import (
 var msgBurstCount uint
 var msgLastSentTime time.Time
 
+// Useful information
+var BotUsername string
+
 func init() {
 	msgBurstCount = 0
 	msgLastSentTime = time.Now()
@@ -69,7 +72,11 @@ func MsgDispatch(isPrivate bool, username string, client *gumble.Client, msg str
 // Remove prefix from command for single argument (I.E. "!play 22" -> "22")
 func LazyRemovePrefix(message, prefix string) string {
 	char := config.CmdPrefix
-	return strings.TrimSpace(message[len(char+prefix):])
+	if strings.HasPrefix(message, char) {
+		return strings.TrimSpace(message[len(char+prefix):])
+	} else {
+		return strings.TrimSpace(message[len(BotUsername+prefix)+1:])
+	}
 }
 
 func DebugPrintln(inter ...interface{}) {

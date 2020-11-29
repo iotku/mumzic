@@ -32,6 +32,7 @@ func main() {
 				files[key] = file
 			}
 			fmt.Printf("audio player loaded! (%d files)\n", search.MaxDBID)
+			helper.BotUsername = e.Client.Self.Name
 		},
 		TextMessage: func(e *gumble.TextMessageEvent) {
 			if e.Sender == nil {
