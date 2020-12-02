@@ -16,11 +16,11 @@ var msgLastSentTime time.Time
 
 // Useful information
 var BotUsername string
+var ServerHostname string
 
 func init() {
 	msgBurstCount = 0
 	msgLastSentTime = time.Now()
-	config.VolumeLevel = 0.25 // Default volume level
 }
 
 // StripHTMLTags removes all html tags from string in order to be parsed easier

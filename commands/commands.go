@@ -89,13 +89,13 @@ func PlaybackControls(client *gumble.Client, message string, isPrivate bool, sen
 	}
 
 	// Set volume
-	// At some point consider switching to percentage based system
-	if isCommand(message, "vol ") || isCommand(message, config.CmdPrefix+"volume ") {
+	// TODO: At some point consider switching to percentage based system
+	if isCommand(message, "vol ") {
 		message = "." + helper.LazyRemovePrefix(message, "vol")
 		value, err := strconv.ParseFloat(message, 32)
 
 		if err == nil {
-			fmt.Printf("%f", value)
+			fmt.Println("Current Volume: ", value)
 			config.VolumeLevel = float32(value)
 			playback.Stream.Volume = float32(value)
 		}
@@ -123,6 +123,7 @@ func PlaybackControls(client *gumble.Client, message string, isPrivate bool, sen
 		helper.DebugPrintln(err)
 		return true
 	}
+
 	return false
 }
 
@@ -159,6 +160,10 @@ func SearchCommands(client *gumble.Client, message string, isPrivate bool, sende
 			}
 		}
 		return true
+	}
+
+	if isCommand(message, "saveconf") {
+		config.SaveConfig()
 	}
 
 	return false
