@@ -31,7 +31,7 @@ func playOnly(client *gumble.Client) {
 }
 
 func PlaybackControls(client *gumble.Client, message string, isPrivate bool, sender string) bool {
-	helper.DebugPrintln("IsPlaying:", playback.IsPlaying, "DoNext:", playback.DoNext)
+	helper.DebugPrintln("IsPlaying:", playback.IsPlaying, "IsWaiting:", playback.IsWaiting, "DoNext:", playback.DoNext)
 	if isCommand(message, "play ") {
 		id := helper.LazyRemovePrefix(message, "play ")
 		if id != "" && len(playlist.Songlist) == 0 {

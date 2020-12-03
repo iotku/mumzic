@@ -57,6 +57,9 @@ func WaitForStop(client *gumble.Client) {
 			Play(playlist.Songlist[playlist.Currentsong], client)
 			DoNext = "next"
 			SkipBy = 1
+		} else {
+			DoNext = "stop"
+			IsPlaying = false
 		}
 	default:
 		IsWaiting = false
