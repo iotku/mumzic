@@ -33,7 +33,7 @@ func getMaxID(database string) int {
 	defer db.Close()
 	checkErrPanic(err)
 	var count int
-	err = db.QueryRow("select count(*) from music;").Scan(&count)
+	err = db.QueryRow("select max(ROWID) from music;").Scan(&count)
 	checkErrPanic(err)
 	return count
 }
