@@ -35,28 +35,16 @@ func WaitForStop(client *gumble.Client) {
 		client.Self.SetComment("Not Playing.")
 		// Do nothing
 	case "next":
-		if len(playlist.Songlist) > playlist.Currentsong+1 {
-			playlist.Currentsong++
-			Play(playlist.Songlist[playlist.Currentsong], client)
+		if playlist.HasNext() {
+			Play(playlist.Next(), client)
 		} else {
 			DoNext = "stop"
 			IsPlaying = false
 		}
 	case "skip":
-		if playlist.Currentsong+SkipBy < 0 {
-			IsPlaying = false
-			break
-		}
-		if len(playlist.Songlist) > (playlist.Currentsong + SkipBy) {
-			playlist.Currentsong = playlist.Currentsong + SkipBy
-			Play(playlist.Songlist[playlist.Currentsong], client)
+		if playlist.HasNext() {
+			Play(playlist.Skip(SkipBy), client)
 			DoNext = "next"
-			SkipBy = 1
-		} else if len(playlist.Songlist) > (playlist.Currentsong + 1) {
-			playlist.Currentsong = playlist.Currentsong + 1
-			Play(playlist.Songlist[playlist.Currentsong], client)
-			DoNext = "next"
-			SkipBy = 1
 		} else {
 			DoNext = "stop"
 			IsPlaying = false
@@ -65,27 +53,33 @@ func WaitForStop(client *gumble.Client) {
 		IsWaiting = false
 	}
 	IsWaiting = false
+	SkipBy = 1
 	return
 }
 
-func Play(path string, client *gumble.Client) {
+func Stop(client *gumble.Client) {
 	if Stream != nil {
 		if Stream.State() == gumbleffmpeg.StatePlaying {
 			err := Stream.Stop()
 			helper.DebugPrintln(err)
 		}
 	}
+}
+
+func Play(path string, client *gumble.Client) {
+	// Stop if currently playing
+	Stop(client)
 
 	path = helper.StripHTMLTags(path)
 	IsPlaying = true
-	helper.ChanMsg(client, "Now Playing: "+playlist.Metalist[playlist.Currentsong])
-	client.Self.SetComment("Now Playing: " + playlist.Metalist[playlist.Currentsong])
 	if strings.HasPrefix(path, "http") {
 		PlayYT(path, client)
 	} else {
 		PlayFile(path, client)
 	}
 
+	helper.ChanMsg(client, "Now Playing: "+playlist.GetCurrentHuman())
+	client.Self.SetComment("Now Playing: " + playlist.GetCurrentHuman())
 	go WaitForStop(client)
 }
 

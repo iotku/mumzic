@@ -17,13 +17,12 @@ import (
 
 func playOnly(client *gumble.Client) {
 	// Skip Current track for frequent cases where you've just queued a new track and want to start
-	if playback.IsPlaying == false && len(playlist.Songlist) == playlist.Currentsong+2 {
-		playlist.Currentsong = playlist.Currentsong + 1
-		playback.Play(playlist.Songlist[playlist.Currentsong], client)
+	if playback.IsPlaying == false && playlist.Size() == playlist.Position+2 {
+		playback.Play(playlist.Next(), client)
 		playback.DoNext = "next"
-	} else if len(playlist.Songlist) > 0 && playback.IsPlaying == false {
+	} else if playlist.Size() > 0 && playback.IsPlaying == false {
 		// if Stream and Songlist exists
-		playback.Play(playlist.Songlist[playlist.Currentsong], client)
+		playback.Play(playlist.GetCurrentPath(), client)
 		playback.DoNext = "next"
 	} else if playback.Stream == nil {
 		// Do nothing if nothing is queued
@@ -34,11 +33,11 @@ func PlaybackControls(client *gumble.Client, message string, isPrivate bool, sen
 	helper.DebugPrintln("IsPlaying:", playback.IsPlaying, "IsWaiting:", playback.IsWaiting, "DoNext:", playback.DoNext)
 	if isCommand(message, "play ") {
 		id := helper.LazyRemovePrefix(message, "play ")
-		if id != "" && len(playlist.Songlist) == 0 {
+		if id != "" && playlist.Size() == 0 {
 			// Add to queue then start playing queue
 			queued := playlist.AddToQueue(isPrivate, sender, id, client)
 			if queued == true {
-				playback.Play(playlist.Songlist[playlist.Currentsong], client)
+				playback.Play(playlist.GetCurrentPath(), client)
 				playback.DoNext = "next"
 			}
 		} else if id == "" {
@@ -57,19 +56,19 @@ func PlaybackControls(client *gumble.Client, message string, isPrivate bool, sen
 	}
 
 	if isCommand(message, "list") {
-		current := playlist.Currentsong
-		amount := len(playlist.Songlist) - current
+		current := playlist.Position
+		amount := playlist.Size() - current
 
 		// Try poorly to avoid messages being dropped by mumble server for sending too fast
 		if amount > config.MaxLines {
 			amount = config.MaxLines
 		}
 
-		for i := 0; i < amount; i++ {
-			helper.MsgDispatch(isPrivate, sender, client, fmt.Sprintf("# %d: %s\n", i, playlist.Metalist[current+i]))
+		for i, line := range playlist.GetList(amount) {
+			helper.MsgDispatch(isPrivate, sender, client, fmt.Sprintf("# %d: %s\n", i, line))
 		}
 
-		helper.MsgDispatch(isPrivate, sender, client, fmt.Sprintf("%d Track(s) Queued.\n", len(playlist.Songlist)-current))
+		helper.MsgDispatch(isPrivate, sender, client, fmt.Sprintf("%d Track(s) Queued.\n", playlist.Size()-current))
 		return true
 	}
 

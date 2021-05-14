@@ -27,7 +27,6 @@ func checkErrPanic(err error) {
 }
 
 // Query SQLite database to count maximum amount of rows, as to not point to non existent ID
-// TODO: Perhaps catch error instead?
 func getMaxID(database string) int {
 	db, err := sql.Open("sqlite3", database)
 	defer db.Close()

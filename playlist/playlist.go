@@ -10,12 +10,63 @@ import (
 	"layeh.com/gumble/gumble"
 )
 
-// Playlist elements
-var Songlist = make([]string, 0) // Contains Raw paths (filepath or url)
-var Metalist = make([]string, 0) // Contains "Human" readable Titles corresponding to Songlist entry
+// Raw path // Human path
+var Playlist [][]string
 
-// Position In playlist
-var Currentsong = 0
+// Position In Playlist
+var Position = 0
+
+func pAdd(path, human string) {
+	Playlist = append(Playlist, []string{path, human})
+}
+
+func GetCurrentPath() string {
+	return Playlist[Position][0]
+}
+
+func GetCurrentHuman() string {
+	return Playlist[Position][1]
+}
+
+func GetList(max int) []string {
+	var trackList []string
+	for i := Position; i < Position+max; i++ {
+		if Position+max > Size() {
+			return trackList
+		}
+		trackList = append(trackList, Playlist[i][1])
+	}
+
+	return trackList
+}
+
+func HasNext() bool {
+	return len(Playlist) > Position+1
+}
+
+func Next() string {
+	if !HasNext() {
+		return ""
+	}
+	Position++
+	return GetCurrentPath()
+}
+
+func Skip(amount int) string {
+	if Size()+amount < 0 || !HasNext() {
+		return ""
+	}
+
+	if Position+amount > Size() {
+		amount = 1 // only skip one track
+	}
+	Position = Position + amount
+	return GetCurrentPath()
+}
+
+func Size() int {
+	return len(Playlist)
+}
 
 func QueueID(trackID int) (human string) {
 	if trackID > search.MaxDBID || trackID < 1 {
@@ -25,16 +76,14 @@ func QueueID(trackID int) (human string) {
 	if path == "" {
 		return ""
 	}
-	Songlist = append(Songlist, path)
-	Metalist = append(Metalist, human)
+	pAdd(path, human)
 
 	return human
 }
 
 func QueueYT(url, human string) string {
 	// TODO Check with API if video is valid for youtube links
-	Songlist = append(Songlist, url)
-	Metalist = append(Metalist, human)
+	pAdd(url, human)
 	return human
 }
 
@@ -42,7 +91,7 @@ func AddToQueue(isPrivate bool, sender string, path string, client *gumble.Clien
 	// For YTDL URLS
 	path = helper.StripHTMLTags(path)
 	if strings.HasPrefix(path, "http") && youtubedl.IsWhiteListedURL(path) == true {
-		// add to playlist
+		// add to Playlist
 		// Get "Human" from web page title (I hope this doesn't trigger anti-spam...)
 		var human string
 		title := youtubedl.GetYtdlTitle(path)
