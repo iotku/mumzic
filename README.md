@@ -23,4 +23,4 @@ Note: Here we used the `-insecure` flag, to (hopefully) avoid the pain that come
 See [usage.md](https://github.com/iotku/mumzic/blob/master/USAGE.md)
 
 ## Known Mumble Limitations (Not my fault, for once.)
-* No stereo audio (See https://github.com/mumble-voip/mumble/issues/2829)
+* No stereo audio (See https://github.com/mumble-voip/mumble/issues/2829 & https://github.com/layeh/gumble/issues/51)
