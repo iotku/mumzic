@@ -39,6 +39,8 @@ func getMaxID(database string) int {
 
 // Query SQLite database to get filepath related to ID
 func GetTrackById(trackID int) (filepath, humanout string) {
+	// Update MaxDBID when searching via ID to accommodate possibility of database changing size while mumzic is running
+	MaxDBID = getMaxID(config.Songdb) 
 	if trackID > MaxDBID {
 		return "", ""
 	}
