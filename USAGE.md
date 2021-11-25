@@ -11,7 +11,7 @@
 
 ## Generating a local media.db (for local file playback)
 
-Currently "gendb" ([found here](https://github.com/iotku/mumzic/tree/master/gendb)) is used to create a local database of Music files for the bot to play and is built seperately (go build/go install in the gendb directory).
+Currently "gendb" ([found here](https://github.com/iotku/genMusicSQLiteDB)) is used to create a local database of Music files for the bot to play and is built seperately (go build/go install in the gendb directory).
 
 ### Create media.db for mumzic
 `$ gendb [path/to/music/directory]`
