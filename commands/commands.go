@@ -31,7 +31,8 @@ func playOnly(client *gumble.Client) {
 
 func PlaybackControls(client *gumble.Client, message string, isPrivate bool, sender string) bool {
 	helper.DebugPrintln("IsPlaying:", playback.IsPlaying, "IsWaiting:", playback.IsWaiting, "DoNext:", playback.DoNext)
-	if isCommand(message, "play ") {
+	
+    if isCommand(message, "play ") {
 		id := helper.LazyRemovePrefix(message, "play ")
 		if id != "" && playlist.Size() == 0 {
 			// Add to queue then start playing queue

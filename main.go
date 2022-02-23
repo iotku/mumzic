@@ -58,14 +58,8 @@ func main() {
 			}
 
 			if strings.HasPrefix(e.Message, e.Client.Self.Name) || strings.HasPrefix(e.Message, config.CmdPrefix) {
-				match := commands.PlaybackControls(e.Client, e.Message, isPrivate, e.Sender.Name)
-
-				// probably a pointless optimization, but avoid checking for search command if playback Control was a match
-				if match == true {
-					return
-				}
-
-				commands.SearchCommands(e.Client, e.Message, isPrivate, e.Sender.Name)
+				go commands.PlaybackControls(e.Client, e.Message, isPrivate, e.Sender.Name)
+				go commands.SearchCommands(e.Client, e.Message, isPrivate, e.Sender.Name)
 			}
 		},
 		ChannelChange: func(e *gumble.ChannelChangeEvent) {
