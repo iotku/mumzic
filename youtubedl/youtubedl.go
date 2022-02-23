@@ -20,7 +20,7 @@ func IsWhiteListedURL(url string) bool {
 }
 
 func GetYtdlTitle(url string) string {
-	ytdl := exec.Command("youtube-dl", "-e", url)
+	ytdl := exec.Command("yt-dlp", "-e", url)
 	var output bytes.Buffer
 	ytdl.Stdout = &output
 	err := ytdl.Run()
