@@ -5,7 +5,7 @@ WIP
 ## Getting Started
 
 ### Building
-Base Reqirements: go / ffmpeg / youtube-dl / sqlite3
+Base Reqirements: go / ffmpeg / yt-dlp / sqlite3
 
 `$ go get github.com/iotku/mumzic/`
 
