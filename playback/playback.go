@@ -69,7 +69,6 @@ func Stop(client *gumble.Client) {
 func Play(path string, client *gumble.Client) {
 	// Stop if currently playing
 	Stop(client)
-
 	path = helper.StripHTMLTags(path)
 	IsPlaying = true
 	if strings.HasPrefix(path, "http") {

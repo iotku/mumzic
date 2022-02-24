@@ -42,22 +42,10 @@ func main() {
 				return
 			}
 
-			var isPrivate bool // Was message sent privately?
+            isPrivate := (len(e.TextMessage.Channels) == 0) // If no channels, is private message
+            logMessage(e, isPrivate)
 
-			if len(e.TextMessage.Channels) == 0 {
-				// Direct Message
-				log.Printf("DMSG (%s): %s", e.Sender.Name, e.Message)
-				if e.Message == "Ping" {
-					helper.UserMsg(e.Client, e.Sender.Name, "Pong")
-				}
-				isPrivate = true
-			} else {
-				// Channel Message
-				log.Printf("CMSG (%s) %s: %s", e.Sender.Channel.Name, e.Sender.Name, e.Message)
-				isPrivate = false
-			}
-
-			if strings.HasPrefix(e.Message, e.Client.Self.Name) || strings.HasPrefix(e.Message, config.CmdPrefix) {
+            if msgHasCommandPrefix(e) {
 				go commands.PlaybackControls(e.Client, e.Message, isPrivate, e.Sender.Name)
 				go commands.SearchCommands(e.Client, e.Message, isPrivate, e.Sender.Name)
 			}
@@ -73,4 +61,16 @@ func main() {
 			config.SaveConfig()
 		},
 	})
+}
+
+func logMessage(e *gumble.TextMessageEvent, isPrivate bool) {
+    if isPrivate {
+        log.Printf("DMSG (%s): %s", e.Sender.Name, e.Message)
+    } else {
+        log.Printf("CMSG (%s) %s: %s", e.Sender.Channel.Name, e.Sender.Name, e.Message)
+    }
+}
+
+func msgHasCommandPrefix(e *gumble.TextMessageEvent) bool {
+    return strings.HasPrefix(e.Message, e.Client.Self.Name) || strings.HasPrefix(e.Message, config.CmdPrefix)
 }
