@@ -60,8 +60,7 @@ func WaitForStop(client *gumble.Client) {
 func Stop(client *gumble.Client) {
 	if Stream != nil {
 		if Stream.State() == gumbleffmpeg.StatePlaying {
-			err := Stream.Stop()
-			helper.DebugPrintln(err)
+			Stream.Stop() // Only error this will respond with is if not playing.
 		}
 	}
 }

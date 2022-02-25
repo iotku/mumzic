@@ -31,8 +31,8 @@ func playOnly(client *gumble.Client) {
 
 func PlaybackControls(client *gumble.Client, message string, isPrivate bool, sender string) bool {
 	helper.DebugPrintln("IsPlaying:", playback.IsPlaying, "IsWaiting:", playback.IsWaiting, "DoNext:", playback.DoNext)
-	
-    if isCommand(message, "play ") {
+
+	if isCommand(message, "play ") {
 		id := helper.LazyRemovePrefix(message, "play ")
 		if id != "" && playlist.Size() == 0 {
 			// Add to queue then start playing queue
@@ -99,6 +99,7 @@ func PlaybackControls(client *gumble.Client, message string, isPrivate bool, sen
 			config.VolumeLevel = float32(value)
 			playback.Stream.Volume = float32(value)
 		}
+		return true
 	}
 
 	// Send current volume to channel
@@ -138,7 +139,7 @@ func SearchCommands(client *gumble.Client, message string, isPrivate bool, sende
 			return true
 		}
 		seed := rand.NewSource(time.Now().UnixNano())
-        //#nosec G404 -- Cryptographic randomness is not required
+		//#nosec G404 -- Cryptographic randomness is not required
 		randsrc := rand.New(seed)
 
 		if value > config.MaxLines {
@@ -171,13 +172,6 @@ func SearchCommands(client *gumble.Client, message string, isPrivate bool, sende
 }
 
 func isCommand(message, command string) bool {
-	message = strings.ToLower(message)
-	command = strings.ToLower(command)
-	if strings.HasPrefix(message, config.CmdPrefix+command) || strings.HasPrefix(message, helper.BotUsername+" "+command) {
-		helper.DebugPrintln("Command: ", command, "Message:", message)
-		return true
-	} else {
-		//helper.DebugPrintln("Not Command:", command, "Is actually", message, "Where cmd prefix is", config.CmdPrefix)
-		return false
-	}
+	return strings.HasPrefix(strings.ToLower(message), config.CmdPrefix+command) ||
+		strings.HasPrefix(strings.ToLower(command), helper.BotUsername+" "+command)
 }

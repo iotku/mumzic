@@ -20,6 +20,7 @@ type msgBundle struct {
 var msgBurstCount uint
 var msgLastSentTime time.Time
 var msgChan chan(msgBundle)
+
 // Useful information
 var BotUsername string
 var ServerHostname string
@@ -71,20 +72,17 @@ func watchMsgChan() {
 // StripHTMLTags removes all html tags from string in order to be parsed easier
 func StripHTMLTags(str string) string {
 	removeHTMLTags := regexp.MustCompile("<[^>]*>")
-	str = removeHTMLTags.ReplaceAllString(str, "")
-	return str
+	return removeHTMLTags.ReplaceAllString(str, "")
 }
 
 // ChanMsg sends supplied to the current mumble channel the bot is occupying
 func ChanMsg(client *gumble.Client, msg string) {
-    bundle := msgBundle{client, "", msg}
-    msgChan <- bundle
+    msgChan <- msgBundle{client, "", msg}
 }
 
 // UserMsg sends msg directly to user by username supplied
 func UserMsg(client *gumble.Client, username string, msg string) {
-    bundle := msgBundle{client, username, msg}
-    msgChan <- bundle
+    msgChan <- msgBundle{client, username, msg}
 }
 
 // MsgDispatch will send to either UserMsg or ChanMsg depending on if message is private or not.
@@ -99,9 +97,8 @@ func MsgDispatch(isPrivate bool, username string, client *gumble.Client, msg str
 
 // Remove prefix from command for single argument (I.E. "!play 22" -> "22")
 func LazyRemovePrefix(message, prefix string) string {
-	char := config.CmdPrefix
-	if strings.HasPrefix(message, char) {
-		return strings.TrimSpace(message[len(char+prefix):])
+	if strings.HasPrefix(message, config.CmdPrefix) {
+		return strings.TrimSpace(message[len(config.CmdPrefix+prefix):])
 	} else {
 		return strings.TrimSpace(message[len(BotUsername+prefix)+1:])
 	}
