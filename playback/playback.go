@@ -65,7 +65,7 @@ func IsPlaying() bool {
 
 func Stop() {
 	if IsPlaying() {
-        Stream.Stop() // Only error this will respond with is if not playing.
+		Stream.Stop() //#nosec G104 -- Only error this will respond with is if not playing.
 	}
 }
 
