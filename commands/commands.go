@@ -17,10 +17,10 @@ import (
 
 func playOnly(client *gumble.Client) {
 	// Skip Current track for frequent cases where you've just queued a new track and want to start
-	if playback.IsPlaying == false && playlist.Size() == playlist.Position+2 {
+	if !playback.IsPlaying() && playlist.Size() == playlist.Position+2 {
 		playback.Play(playlist.Next(), client)
 		playback.DoNext = "next"
-	} else if playlist.Size() > 0 && playback.IsPlaying == false {
+	} else if playlist.Size() > 0 && !playback.IsPlaying() {
 		// if Stream and Songlist exists
 		playback.Play(playlist.GetCurrentPath(), client)
 		playback.DoNext = "next"
@@ -30,7 +30,7 @@ func playOnly(client *gumble.Client) {
 }
 
 func PlaybackControls(client *gumble.Client, message string, isPrivate bool, sender string) bool {
-	helper.DebugPrintln("IsPlaying:", playback.IsPlaying, "IsWaiting:", playback.IsWaiting, "DoNext:", playback.DoNext)
+	helper.DebugPrintln("IsPlaying:", playback.IsPlaying(), "DoNext:", playback.DoNext)
 
 	if isCommand(message, "play ") {
 		id := helper.LazyRemovePrefix(message, "play ")
@@ -60,7 +60,7 @@ func PlaybackControls(client *gumble.Client, message string, isPrivate bool, sen
 		current := playlist.Position
 		amount := playlist.Size() - current
 
-		// Try poorly to avoid messages being dropped by mumble server for sending too fast
+		// TODO: Send to more buffer
 		if amount > config.MaxLines {
 			amount = config.MaxLines
 		}

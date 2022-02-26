@@ -17,21 +17,13 @@ var Stream *gumbleffmpeg.Stream
 
 // This can probably be replaced by with good control flow and/or channels, might be subject to race conditions
 var DoNext = "stop" // stop, next, skip [int]
-var IsWaiting bool
-var IsPlaying bool
 var SkipBy = 1
 
-// Probably horrific logic
+// Wait for playback stream to stop to perform next action
 func WaitForStop(client *gumble.Client) {
-	// wait for playback to stop
-	if IsWaiting == true {
-		return
-	}
-	IsWaiting = true
 	Stream.Wait()
 	switch DoNext {
 	case "stop":
-		IsPlaying = false
 		client.Self.SetComment("Not Playing.")
 		// Do nothing
 	case "next":
@@ -39,7 +31,6 @@ func WaitForStop(client *gumble.Client) {
 			Play(playlist.Next(), client)
 		} else {
 			DoNext = "stop"
-			IsPlaying = false
 		}
 	case "skip":
 		if playlist.HasNext() {
@@ -47,29 +38,16 @@ func WaitForStop(client *gumble.Client) {
 			DoNext = "next"
 		} else {
 			DoNext = "stop"
-			IsPlaying = false
 		}
 	default:
-		IsWaiting = false
-	}
-	IsWaiting = false
-	SkipBy = 1
-	return
-}
-
-func Stop(client *gumble.Client) {
-	if Stream != nil {
-		if Stream.State() == gumbleffmpeg.StatePlaying {
-			Stream.Stop() // Only error this will respond with is if not playing.
-		}
+		SkipBy = 1
 	}
 }
 
 func Play(path string, client *gumble.Client) {
 	// Stop if currently playing
-	Stop(client)
+	Stop()
 	path = helper.StripHTMLTags(path)
-	IsPlaying = true
 	if strings.HasPrefix(path, "http") {
 		PlayYT(path, client)
 	} else {
@@ -81,12 +59,17 @@ func Play(path string, client *gumble.Client) {
 	go WaitForStop(client)
 }
 
-func PlayFile(path string, client *gumble.Client) {
-	if Stream != nil {
-		err := Stream.Stop()
-		helper.DebugPrintln(err)
-	}
+func IsPlaying() bool {
+	return Stream != nil && Stream.State() == gumbleffmpeg.StatePlaying
+}
 
+func Stop() {
+	if IsPlaying() {
+        Stream.Stop() // Only error this will respond with is if not playing.
+	}
+}
+
+func PlayFile(path string, client *gumble.Client) {
 	Stream = gumbleffmpeg.New(client, gumbleffmpeg.SourceFile(path))
 	Stream.Volume = config.VolumeLevel
 
@@ -104,11 +87,6 @@ func PlayYT(url string, client *gumble.Client) {
 	if youtubedl.IsWhiteListedURL(url) == false {
 		log.Printf("PlayYT Failed: URL %s Doesn't meet whitelist", url)
 		return
-	}
-
-	if Stream != nil {
-		err := Stream.Stop()
-		helper.DebugPrintln(err)
 	}
 
 	Stream = gumbleffmpeg.New(client, youtubedl.GetYtdlSource(url))
