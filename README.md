@@ -8,7 +8,9 @@ WIP
 Base Reqirements: go / ffmpeg / yt-dlp / sqlite3
 
 Until I can figure out modifying modules properly
+
 `$ git clone github.com/iotku/mumzic/`
+
 You can `go build` which should pull in my modified gumble which has stereo support
 
 ### Running
