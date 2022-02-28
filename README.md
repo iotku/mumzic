@@ -23,3 +23,9 @@ Note: Here we used the `-insecure` flag, to (hopefully) avoid the pain that come
 
 ### Usage / Commands
 See [usage.md](https://github.com/iotku/mumzic/blob/master/USAGE.md)
+
+## Stereo Audio
+Mumble Client 1.4.x or higher required, Enable Positional Audio and Headphones checkbox in Mumble Client Audio Output settings.
+
+For stereo audio to work see the building instructions above which should *hopefully* pull in my modified gumble with stereo output.
+Using `go get` / `go install` WONT work becasue it does not respect the replace method in go.mod.
