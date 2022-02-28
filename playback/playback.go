@@ -65,7 +65,7 @@ func IsPlaying() bool {
 
 func Stop() {
 	if IsPlaying() {
-		Stream.Stop() //#nosec G104 -- Only error this will respond with is if not playing.
+		Stream.Stop() //#nosec G104 -- Only error this will respond with is stream not playing.
 	}
 }
 
@@ -78,7 +78,6 @@ func PlayFile(path string, client *gumble.Client) {
 	} else {
 		helper.DebugPrintln("Playing:", path)
 	}
-
 }
 
 // Play youtube video

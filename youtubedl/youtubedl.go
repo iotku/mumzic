@@ -33,6 +33,5 @@ func GetYtdlTitle(url string) string {
 
 func GetYtdlSource(url string) gumbleffmpeg.Source {
 	// TODO: Make special handling for playlists?
-	gumbleSource := gumbleffmpeg.SourceExec("yt-dlp", "--no-playlist", "-f", "bestaudio", "--rm-cache-dir", "-q", "-o", "-", url)
-	return gumbleSource
+	return gumbleffmpeg.SourceExec("yt-dlp", "--no-playlist", "-f", "bestaudio", "--rm-cache-dir", "-q", "-o", "-", url)
 }

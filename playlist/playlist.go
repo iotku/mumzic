@@ -57,7 +57,7 @@ func Skip(amount int) string {
 		return ""
 	}
 
-	if Position+amount > Size() {
+	if Position+amount >= Size() {
 		amount = 1 // only skip one track
 	}
 	Position = Position + amount

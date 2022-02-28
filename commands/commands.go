@@ -145,10 +145,18 @@ func SearchCommands(client *gumble.Client, message string, isPrivate bool, sende
 		if value > config.MaxLines {
 			value = config.MaxLines
 		}
+        plistOrigSize := playlist.Size()
+        hadNext := playlist.HasNext()
 		for i := 0; i < value; i++ {
 			id := randsrc.Intn(search.MaxDBID)
 			playlist.AddToQueue(isPrivate, sender, strconv.Itoa(id), client)
 		}
+        if !playback.IsPlaying() && plistOrigSize == 0 {
+             playback.Play(playlist.GetCurrentPath(), client)           
+        } else if !playback.IsPlaying() && !hadNext {
+            playlist.Skip(1)
+            playback.Play(playlist.GetCurrentPath(), client)
+        }
 
 		return true
 	}
@@ -166,6 +174,7 @@ func SearchCommands(client *gumble.Client, message string, isPrivate bool, sende
 
 	if isCommand(message, "saveconf") {
 		config.SaveConfig()
+        return true
 	}
 
 	return false
