@@ -20,7 +20,6 @@ type Player struct {
 	Playlist playlist.List
 	volume   float32
 	DoNext   string
-	SkipBy   int
 }
 
 func TargetUser(client *gumble.Client, user string) {
@@ -50,8 +49,7 @@ func NewPlayer(client *gumble.Client) *Player {
 			Position: 0,
 		},
 		volume: config.VolumeLevel,
-		DoNext: "stop", // stop, next, skip [int]
-		SkipBy: 1,
+		DoNext: "stop", // stop, next
 	}
 }
 
@@ -66,6 +64,12 @@ func (player *Player) IsStopped() bool {
 	return false
 }
 
+func (player *Player) PlayCurrent() {
+	if !player.Playlist.IsEmpty() {
+		player.Play(player.Playlist.GetCurrentPath())
+	}
+}
+
 // WaitForStop waits for the playback stream to end and performs the upcoming action
 func (player *Player) WaitForStop() {
 	player.Stream.Wait()
@@ -75,19 +79,12 @@ func (player *Player) WaitForStop() {
 	// Do nothing
 	case "next":
 		if player.Playlist.HasNext() {
-			player.Play(player.Playlist.Next())
-		} else {
-			player.DoNext = "stop"
-		}
-	case "skip":
-		if player.Playlist.HasNext() {
-			player.Play(player.Playlist.Skip(player.SkipBy))
-			player.DoNext = "next"
+			player.Playlist.Next()
+			player.PlayCurrent()
 		} else {
 			player.DoNext = "stop"
 		}
 	default:
-		player.SkipBy = 1
 	}
 }
 
@@ -128,9 +125,13 @@ func (player *Player) PlayFile(path string) {
 }
 
 func (player *Player) Skip(amount int) {
-	player.Playlist.Skip(amount)
-	player.DoNext = "skip"
-	if player.IsPlaying() {
+	if player.Playlist.HasNext() {
+		player.DoNext = "stop"
+		player.Playlist.Skip(amount)
+		player.PlayCurrent()
+		player.DoNext = "next"
+	} else {
+		player.DoNext = "stop"
 		player.Stop()
 	}
 }

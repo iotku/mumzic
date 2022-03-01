@@ -33,9 +33,9 @@ func play(id string, sender string, isPrivate bool, player *playback.Player) {
 			player.Skip(1)
 		} else if player.Playlist.HasNext() && AddSongToQueue(id, sender, isPrivate, player) {
 			player.Play(player.Playlist.GetCurrentPath())
-		} else if id != "" && !player.IsStopped() && AddSongToQueue(id, sender, isPrivate, player) {
-		} // Just add to queue if playing
-	}
+		}
+	} else if id != "" && !player.IsStopped() && AddSongToQueue(id, sender, isPrivate, player) {
+	} // Just add to queue if playing
 
 	if !player.Playlist.IsEmpty() && player.IsStopped() { // Recover from stopped player.
 		player.Play(player.Playlist.GetCurrentPath())
