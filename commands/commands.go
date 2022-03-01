@@ -13,29 +13,36 @@ import (
 	"github.com/iotku/mumzic/search"
 )
 
-func AddSongToQueue(id string, sender string, isPrivate bool, player *playback.Player) {
+func AddSongToQueue(id string, sender string, isPrivate bool, player *playback.Player) bool {
 	queued, err := player.Playlist.AddToQueue(id)
-	if err == nil {
-		helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Queued: "+queued)
-	} else {
+	if err != nil {
 		helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Error: "+err.Error())
+		return false
 	}
+
+	helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Queued: "+queued)
+	return true
 }
 
 func play(id string, sender string, isPrivate bool, player *playback.Player) {
-	if id != "" && player.Playlist.IsEmpty() {
-		AddSongToQueue(id, sender, isPrivate, player)
-	} else if id != "" && player.IsStopped() && !player.Playlist.HasNext() {
-		AddSongToQueue(id, sender, isPrivate, player)
-		if player.Playlist.HasNext() {
-			player.Playlist.Skip(1)
-		}
+	// This is still really scuffed
+	if id != "" && player.IsStopped() { // Has argument
+		if player.Playlist.IsEmpty() && AddSongToQueue(id, sender, isPrivate, player) {
+			player.Play(player.Playlist.GetCurrentPath())
+		} else if !player.Playlist.HasNext() && AddSongToQueue(id, sender, isPrivate, player) {
+			player.Skip(1)
+		} else if player.Playlist.HasNext() && AddSongToQueue(id, sender, isPrivate, player) {
+			player.Play(player.Playlist.GetCurrentPath())
+		} else if id != "" && !player.IsStopped() && AddSongToQueue(id, sender, isPrivate, player) {
+		} // Just add to queue if playing
 	}
 
 	if !player.Playlist.IsEmpty() && player.IsStopped() { // Recover from stopped player.
 		player.Play(player.Playlist.GetCurrentPath())
-	} else if !player.IsStopped() { // Just add track to queue if playing
-		AddSongToQueue(id, sender, isPrivate, player)
+	}
+
+	if player.IsPlaying() {
+		player.DoNext = "next"
 	}
 }
 
@@ -105,12 +112,10 @@ func PlaybackControls(player *playback.Player, message string, isPrivate bool, s
 		howMany := helper.LazyRemovePrefix(message, "skip")
 		value, err := strconv.Atoi(howMany)
 		if err != nil {
-			player.SkipBy = 1
+			player.Skip(1)
 		} else {
-			player.SkipBy = value
+			player.Skip(value)
 		}
-		player.DoNext = "skip"
-		player.Play(player.Playlist.Skip(player.SkipBy))
 		return true
 	}
 
@@ -148,7 +153,7 @@ func SearchCommands(player *playback.Player, message string, isPrivate bool, sen
 		if !player.IsPlaying() && plistOrigSize == 0 {
 			player.Play(player.Playlist.GetCurrentPath())
 		} else if !player.IsPlaying() && !hadNext {
-			player.Playlist.Skip(1)
+			player.Skip(1)
 			player.Play(player.Playlist.GetCurrentPath())
 		}
 

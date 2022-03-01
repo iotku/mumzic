@@ -51,6 +51,7 @@ func (list *List) Next() string {
 	return list.GetCurrentPath()
 }
 
+// Skip moves the position by amount, generally this should be called by a playback.Player
 func (list *List) Skip(amount int) string {
 	println("Skipping", amount)
 	if list.Size()+amount < 0 || !list.HasNext() {

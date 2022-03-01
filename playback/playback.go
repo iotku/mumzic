@@ -66,7 +66,7 @@ func (player *Player) IsStopped() bool {
 	return false
 }
 
-// Wait for playback stream to stop to perform next action
+// WaitForStop waits for the playback stream to end and performs the upcoming action
 func (player *Player) WaitForStop() {
 	player.Stream.Wait()
 	switch player.DoNext {
@@ -127,7 +127,15 @@ func (player *Player) PlayFile(path string) {
 	}
 }
 
-// Play youtube video
+func (player *Player) Skip(amount int) {
+	player.Playlist.Skip(amount)
+	player.DoNext = "skip"
+	if player.IsPlaying() {
+		player.Stop()
+	}
+}
+
+// PlayYT streams a URL through ytdl
 func (player *Player) PlayYT(url string) {
 	url = helper.StripHTMLTags(url)
 	if youtubedl.IsWhiteListedURL(url) == false {
