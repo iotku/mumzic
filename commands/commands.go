@@ -28,17 +28,17 @@ func play(id string, sender string, isPrivate bool, player *playback.Player) {
 	// This is still really scuffed
 	if id != "" && player.IsStopped() { // Has argument
 		if player.Playlist.IsEmpty() && AddSongToQueue(id, sender, isPrivate, player) {
-			player.Play(player.Playlist.GetCurrentPath())
+			player.PlayCurrent()
 		} else if !player.Playlist.HasNext() && AddSongToQueue(id, sender, isPrivate, player) {
 			player.Skip(1)
 		} else if player.Playlist.HasNext() && AddSongToQueue(id, sender, isPrivate, player) {
-			player.Play(player.Playlist.GetCurrentPath())
+			player.PlayCurrent()
 		}
 	} else if id != "" && !player.IsStopped() && AddSongToQueue(id, sender, isPrivate, player) {
 	} // Just add to queue if playing
 
 	if !player.Playlist.IsEmpty() && player.IsStopped() { // Recover from stopped player.
-		player.Play(player.Playlist.GetCurrentPath())
+		player.PlayCurrent()
 	}
 
 	if player.IsPlaying() {
@@ -151,10 +151,9 @@ func SearchCommands(player *playback.Player, message string, isPrivate bool, sen
 			}
 		}
 		if !player.IsPlaying() && plistOrigSize == 0 {
-			player.Play(player.Playlist.GetCurrentPath())
+			player.PlayCurrent()
 		} else if !player.IsPlaying() && !hadNext {
 			player.Skip(1)
-			player.Play(player.Playlist.GetCurrentPath())
 		}
 
 		return true
