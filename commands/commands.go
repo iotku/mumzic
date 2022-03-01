@@ -11,104 +11,69 @@ import (
 	"github.com/iotku/mumzic/helper"
 	"github.com/iotku/mumzic/playback"
 	"github.com/iotku/mumzic/search"
-	"layeh.com/gumble/gumble"
 )
 
-func playOnly(client *gumble.Client) {
-	// Skip Current track for frequent cases where you've just queued a new track and want to start
-	if !playback.ChannelPlayer().IsPlaying() && playback.ChannelPlayer().Playlist.Size() == playback.ChannelPlayer().Playlist.Position+2 {
-		playback.ChannelPlayer().Play(playback.ChannelPlayer().Playlist.Next())
-		playback.ChannelPlayer().DoNext = "next"
-	} else if playback.ChannelPlayer().Playlist.Size() > 0 && !playback.ChannelPlayer().IsPlaying() {
-		// if Stream and Songlist exists
-		playback.ChannelPlayer().Play(playback.ChannelPlayer().Playlist.GetCurrentPath())
-		playback.ChannelPlayer().DoNext = "next"
-	} else if playback.ChannelPlayer().Stream == nil {
-		// Do nothing if nothing is queued
+func AddSongToQueue(id string, sender string, isPrivate bool, player *playback.Player) {
+	queued, err := player.Playlist.AddToQueue(id)
+	if err == nil {
+		helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Queued: "+queued)
+	} else {
+		helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Error: "+err.Error())
 	}
 }
 
-func PlaybackControls(client *gumble.Client, message string, isPrivate bool, sender string) bool {
-	helper.DebugPrintln("IsPlaying:", playback.ChannelPlayer().IsPlaying(), "DoNext:", playback.ChannelPlayer().DoNext)
-
-	if isCommand(message, "play ") {
-		id := helper.LazyRemovePrefix(message, "play ")
-		if id != "" && playback.ChannelPlayer().Playlist.Size() == 0 {
-			// Add to queue then start playing queue
-			queued := playback.ChannelPlayer().Playlist.AddToQueue(isPrivate, sender, id)
-			if queued == true {
-				playback.ChannelPlayer().Play(playback.ChannelPlayer().Playlist.GetCurrentPath())
-				playback.ChannelPlayer().DoNext = "next"
-			}
-		} else if id == "" {
-			playOnly(client)
-		} else {
-			playback.ChannelPlayer().Playlist.AddToQueue(isPrivate, sender, id)
-			playback.ChannelPlayer().DoNext = "next"
-			playOnly(client)
+func play(id string, sender string, isPrivate bool, player *playback.Player) {
+	if id != "" && player.Playlist.IsEmpty() {
+		AddSongToQueue(id, sender, isPrivate, player)
+	} else if id != "" && player.IsStopped() && !player.Playlist.HasNext() {
+		AddSongToQueue(id, sender, isPrivate, player)
+		if player.Playlist.HasNext() {
+			player.Playlist.Skip(1)
 		}
-		return true
 	}
 
+	if !player.Playlist.IsEmpty() && player.IsStopped() { // Recover from stopped player.
+		player.Play(player.Playlist.GetCurrentPath())
+	} else if !player.IsStopped() { // Just add track to queue if playing
+		AddSongToQueue(id, sender, isPrivate, player)
+	}
+}
+
+func PlaybackControls(player *playback.Player, message string, isPrivate bool, sender string) bool {
+	helper.DebugPrintln("IsPlaying:", player.IsPlaying(), "DoNext:", player.DoNext)
+
 	if isCommand(message, "play") {
-		playOnly(client)
+		id := helper.LazyRemovePrefix(message, "play")
+		play(id, sender, isPrivate, player)
 		return true
 	}
 
 	if isCommand(message, "list") {
-		current := playback.ChannelPlayer().Playlist.Position
-		amount := playback.ChannelPlayer().Playlist.Size() - current
+		current := player.Playlist.Position
+		amount := player.Playlist.Size() - current
 
 		// TODO: Send to more buffer
 		if amount > config.MaxLines {
 			amount = config.MaxLines
 		}
 
-		for i, line := range playback.ChannelPlayer().Playlist.GetList(amount) {
-			helper.MsgDispatch(isPrivate, sender, client, fmt.Sprintf("# %d: %s\n", i, line))
+		for i, line := range player.Playlist.GetList(amount) {
+			helper.MsgDispatch(player.GetClient(), isPrivate, sender, fmt.Sprintf("# %d: %s\n", i, line))
 		}
 
-		helper.MsgDispatch(isPrivate, sender, client, fmt.Sprintf("%d Track(s) Queued.\n", playback.ChannelPlayer().Playlist.Size()-current))
+		helper.MsgDispatch(player.GetClient(), isPrivate, sender, fmt.Sprintf("%d Track(s) Queued.\n", player.Playlist.Size()-current))
 		return true
 	}
 
-	if isCommand(message, "target") {
-		if client.VoiceTarget == nil {
-			println("target nil")
-		} else {
-			println(client.VoiceTarget.ID)
-		}
-		//client.VoiceTarget = &gumble.VoiceTarget{ID: 2}
-		//userTarget := client.Users.Find(sender)
-		//packet := MumbleProto.VoiceTarget{
-		//	Id:      &client.VoiceTarget.ID,
-		//	Targets: make([]*MumbleProto.VoiceTarget_Target, 0, 1),
-		//}
-		//packet.Targets = append(packet.Targets, &MumbleProto.VoiceTarget_Target{
-		//	Session: []uint32{userTarget.Session},
-		//})
-		//
-		//println(client.Conn.WriteProto(&packet))
-		player := playback.NewPlayer(nil, sender)
-		player.PlayFile(playback.ChannelPlayer().Playlist.GetCurrentPath())
-	}
-
-	if isCommand(message, "untarget") {
-		if client.VoiceTarget != nil {
-			client.VoiceTarget.Clear()
-			client.VoiceTarget = nil
-		}
-	}
-
 	// If Stream object doesn't exist yet, don't do anything to avoid dereference
-	if playback.ChannelPlayer().Stream == nil {
+	if player.Stream == nil {
 		return false
 	}
 
 	// Stop Playback
 	if isCommand(message, "stop") {
-		playback.ChannelPlayer().DoNext = "stop"
-		err := playback.ChannelPlayer().Stream.Stop()
+		player.DoNext = "stop"
+		err := player.Stream.Stop()
 		if err != nil {
 			fmt.Println(err.Error())
 		}
@@ -124,14 +89,14 @@ func PlaybackControls(client *gumble.Client, message string, isPrivate bool, sen
 		if err == nil {
 			fmt.Println("Current Volume: ", value)
 			config.VolumeLevel = float32(value)
-			playback.ChannelPlayer().Stream.Volume = float32(value)
+			player.Stream.Volume = float32(value)
 		}
 		return true
 	}
 
 	// Send current volume to channel
 	if isCommand(message, "vol") {
-		helper.MsgDispatch(isPrivate, sender, client, "Current Volume: "+fmt.Sprintf("%f", playback.ChannelPlayer().Stream.Volume))
+		helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Current Volume: "+fmt.Sprintf("%f", player.Stream.Volume))
 		return true
 	}
 
@@ -140,22 +105,19 @@ func PlaybackControls(client *gumble.Client, message string, isPrivate bool, sen
 		howMany := helper.LazyRemovePrefix(message, "skip")
 		value, err := strconv.Atoi(howMany)
 		if err != nil {
-			// If this isn't a proper value Atoi returns and error, probably harmless but maybe not smart.
-			//log.Println(err)
-			playback.ChannelPlayer().SkipBy = 1
+			player.SkipBy = 1
 		} else {
-			playback.ChannelPlayer().SkipBy = value
+			player.SkipBy = value
 		}
-		playback.ChannelPlayer().DoNext = "skip"
-		err = playback.ChannelPlayer().Stream.Stop()
-		helper.DebugPrintln(err)
+		player.DoNext = "skip"
+		player.Play(player.Playlist.Skip(player.SkipBy))
 		return true
 	}
 
 	return false
 }
 
-func SearchCommands(client *gumble.Client, message string, isPrivate bool, sender string) bool {
+func SearchCommands(player *playback.Player, message string, isPrivate bool, sender string) bool {
 	if search.MaxDBID == 0 {
 		return true
 	} // Don't perform any database related commands if the database doesn't exist (or contains no rows)
@@ -172,17 +134,22 @@ func SearchCommands(client *gumble.Client, message string, isPrivate bool, sende
 		if value > config.MaxLines {
 			value = config.MaxLines
 		}
-		plistOrigSize := playback.ChannelPlayer().Playlist.Size()
-		hadNext := playback.ChannelPlayer().Playlist.HasNext()
+		plistOrigSize := player.Playlist.Size()
+		hadNext := player.Playlist.HasNext()
 		for i := 0; i < value; i++ {
 			id := randsrc.Intn(search.MaxDBID)
-			playback.ChannelPlayer().Playlist.AddToQueue(isPrivate, sender, strconv.Itoa(id))
+			trackName, err := player.Playlist.AddToQueue(strconv.Itoa(id))
+			if err == nil {
+				helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Added: "+trackName)
+			} else {
+				helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Error: "+err.Error())
+			}
 		}
-		if !playback.ChannelPlayer().IsPlaying() && plistOrigSize == 0 {
-			playback.ChannelPlayer().Play(playback.ChannelPlayer().Playlist.GetCurrentPath())
-		} else if !playback.ChannelPlayer().IsPlaying() && !hadNext {
-			playback.ChannelPlayer().Playlist.Skip(1)
-			playback.ChannelPlayer().Play(playback.ChannelPlayer().Playlist.GetCurrentPath())
+		if !player.IsPlaying() && plistOrigSize == 0 {
+			player.Play(player.Playlist.GetCurrentPath())
+		} else if !player.IsPlaying() && !hadNext {
+			player.Playlist.Skip(1)
+			player.Play(player.Playlist.GetCurrentPath())
 		}
 
 		return true
@@ -191,7 +158,7 @@ func SearchCommands(client *gumble.Client, message string, isPrivate bool, sende
 	if isCommand(message, "search ") {
 		results := search.SearchALL(helper.LazyRemovePrefix(message, "search "))
 		for i, v := range results {
-			helper.MsgDispatch(isPrivate, sender, client, v)
+			helper.MsgDispatch(player.GetClient(), isPrivate, sender, v)
 			if i == config.MaxLines { // TODO, Send extra results into 'more' buffer
 				break
 			}

@@ -1,6 +1,7 @@
 package playlist
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 
@@ -51,6 +52,7 @@ func (list *List) Next() string {
 }
 
 func (list *List) Skip(amount int) string {
+	println("Skipping", amount)
 	if list.Size()+amount < 0 || !list.HasNext() {
 		return ""
 	}
@@ -58,12 +60,16 @@ func (list *List) Skip(amount int) string {
 	if list.Position+amount >= list.Size() {
 		amount = 1 // only skip one track
 	}
-	list.Position = list.Position + amount
+	list.Position += amount
 	return list.GetCurrentPath()
 }
 
 func (list *List) Size() int {
 	return len(list.Playlist)
+}
+
+func (list *List) IsEmpty() bool {
+	return len(list.Playlist) == 0
 }
 
 func (list *List) QueueID(trackID int) (human string) {
@@ -85,7 +91,9 @@ func (list *List) QueueYT(url, human string) string {
 	return human
 }
 
-func (list *List) AddToQueue(isPrivate bool, sender string, path string) bool {
+// Add id or url to player queue
+// Return Human Name on success or "", nil on failure
+func (list *List) AddToQueue(path string) (string, error) {
 	// For YTDL URLS
 	path = helper.StripHTMLTags(path)
 	if strings.HasPrefix(path, "http") && youtubedl.IsWhiteListedURL(path) == true {
@@ -100,21 +108,17 @@ func (list *List) AddToQueue(isPrivate bool, sender string, path string) bool {
 			human = path
 		}
 		list.QueueYT(path, human)
-		helper.MsgDispatch(isPrivate, sender, helper.MainClient, "Added: "+human)
-		return true
+		return human, nil
 	} else if strings.HasPrefix(path, "http") == true {
-		helper.MsgDispatch(isPrivate, sender, helper.MainClient, "URL Doesn't meet whitelist, sorry.")
-		return false
+		return "", errors.New("URL Doesn't meet whitelist")
 	}
 
 	// FOR IDs
 	idn, _ := strconv.Atoi(path)
 	human := list.QueueID(idn)
 	if human != "" {
-		helper.MsgDispatch(isPrivate, sender, helper.MainClient, "Added: "+human)
-		return true
+		return human, nil
 	}
 
-	helper.MsgDispatch(isPrivate, sender, helper.MainClient, "Nothing added. (Invalid ID?)")
-	return false
+	return "", errors.New("nothing added. (Invalid ID?)")
 }

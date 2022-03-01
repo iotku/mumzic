@@ -24,7 +24,6 @@ var msgChan chan (msgBundle)
 // Useful information
 var BotUsername string
 var ServerHostname string
-var MainClient *gumble.Client
 
 func init() {
 	msgBurstCount = 0
@@ -87,7 +86,7 @@ func UserMsg(client *gumble.Client, username string, msg string) {
 
 // MsgDispatch will send to either UserMsg or ChanMsg depending on if message is private or not.
 // For messages that will reply in PM (such as !list) if sent directly to bot
-func MsgDispatch(isPrivate bool, username string, client *gumble.Client, msg string) {
+func MsgDispatch(client *gumble.Client, isPrivate bool, username string, msg string) {
 	if isPrivate {
 		UserMsg(client, username, msg)
 	} else {
