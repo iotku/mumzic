@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/iotku/mumzic/playback"
 	"log"
 	"os"
 	"strings"
@@ -21,6 +22,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage of %s: [flags]\n", os.Args[0])
 		flag.PrintDefaults()
 	}
+
+	var channelPlayer *playback.Player
 	// Start main gumble loop
 	gumbleutil.Main(gumbleutil.AutoBitrate, gumbleutil.Listener{
 		Connect: func(e *gumble.ConnectEvent) {
@@ -34,7 +37,7 @@ func main() {
 			} else {
 				fmt.Println("Not Joining", config.LastChannel)
 			}
-
+			channelPlayer = playback.NewPlayer(e.Client)
 		},
 		TextMessage: func(e *gumble.TextMessageEvent) {
 			if e.Sender == nil {
@@ -42,12 +45,12 @@ func main() {
 				return
 			}
 
-			isPrivate := (len(e.TextMessage.Channels) == 0) // If no channels, is private message
+			isPrivate := len(e.TextMessage.Channels) == 0 // If no channels, is private message
 			logMessage(e, isPrivate)
 
 			if msgHasCommandPrefix(e) {
-				go commands.PlaybackControls(e.Client, e.Message, isPrivate, e.Sender.Name)
-				go commands.SearchCommands(e.Client, e.Message, isPrivate, e.Sender.Name)
+				go commands.PlaybackControls(channelPlayer, e.Message, isPrivate, e.Sender.Name)
+				go commands.SearchCommands(channelPlayer, e.Message, isPrivate, e.Sender.Name)
 			}
 		},
 		ChannelChange: func(e *gumble.ChannelChangeEvent) {

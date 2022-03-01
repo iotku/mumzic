@@ -1,6 +1,7 @@
 package playback
 
 import (
+	"layeh.com/gumble/gumble/MumbleProto"
 	"log"
 	"strings"
 
@@ -13,67 +14,113 @@ import (
 	_ "layeh.com/gumble/opus"
 )
 
-var Stream *gumbleffmpeg.Stream
+type Player struct {
+	Stream   *gumbleffmpeg.Stream
+	client   *gumble.Client
+	Playlist playlist.List
+	volume   float32
+	DoNext   string
+	SkipBy   int
+}
 
-// This can probably be replaced by with good control flow and/or channels, might be subject to race conditions
-var DoNext = "stop" // stop, next, skip [int]
-var SkipBy = 1
+func TargetUser(client *gumble.Client, user string) {
+	client.VoiceTarget = &gumble.VoiceTarget{ID: uint32(2)}
+	client.VoiceTarget.AddUser(client.Users.Find(user))
+	userTarget := client.Users.Find(user)
+	packet := MumbleProto.VoiceTarget{
+		Id:      &client.VoiceTarget.ID,
+		Targets: make([]*MumbleProto.VoiceTarget_Target, 0, 1),
+	}
+	packet.Targets = append(packet.Targets, &MumbleProto.VoiceTarget_Target{
+		Session: []uint32{userTarget.Session},
+	})
+
+	err := client.Conn.WriteProto(&packet)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func NewPlayer(client *gumble.Client) *Player {
+	return &Player{
+		Stream: nil,
+		client: client,
+		Playlist: playlist.List{
+			Playlist: make([][]string, 0),
+			Position: 0,
+		},
+		volume: config.VolumeLevel,
+		DoNext: "stop", // stop, next, skip [int]
+		SkipBy: 1,
+	}
+}
+
+func (player *Player) GetClient() *gumble.Client {
+	return player.client
+}
+
+func (player *Player) IsStopped() bool {
+	if player.Stream == nil || player.Stream.State() == gumbleffmpeg.StateStopped {
+		return true
+	}
+	return false
+}
 
 // Wait for playback stream to stop to perform next action
-func WaitForStop(client *gumble.Client) {
-	Stream.Wait()
-	switch DoNext {
+func (player *Player) WaitForStop() {
+	player.Stream.Wait()
+	switch player.DoNext {
 	case "stop":
-		client.Self.SetComment("Not Playing.")
-		// Do nothing
+	//	client.Self.SetComment("Not Playing.")
+	// Do nothing
 	case "next":
-		if playlist.HasNext() {
-			Play(playlist.Next(), client)
+		if player.Playlist.HasNext() {
+			player.Play(player.Playlist.Next())
 		} else {
-			DoNext = "stop"
+			player.DoNext = "stop"
 		}
 	case "skip":
-		if playlist.HasNext() {
-			Play(playlist.Skip(SkipBy), client)
-			DoNext = "next"
+		if player.Playlist.HasNext() {
+			player.Play(player.Playlist.Skip(player.SkipBy))
+			player.DoNext = "next"
 		} else {
-			DoNext = "stop"
+			player.DoNext = "stop"
 		}
 	default:
-		SkipBy = 1
+		player.SkipBy = 1
 	}
 }
 
-func Play(path string, client *gumble.Client) {
+func (player *Player) Play(path string) {
 	// Stop if currently playing
-	Stop()
+	player.Stop()
 	path = helper.StripHTMLTags(path)
 	if strings.HasPrefix(path, "http") {
-		PlayYT(path, client)
+		player.PlayYT(path)
 	} else {
-		PlayFile(path, client)
+		player.PlayFile(path)
 	}
 
-	helper.ChanMsg(client, "Now Playing: "+playlist.GetCurrentHuman())
-	client.Self.SetComment("Now Playing: " + playlist.GetCurrentHuman())
-	go WaitForStop(client)
+	helper.ChanMsg(player.client, "Now Playing: "+player.Playlist.GetCurrentHuman())
+	player.client.Self.SetComment("Now Playing: " + player.Playlist.GetCurrentHuman())
+	go player.WaitForStop()
 }
 
-func IsPlaying() bool {
-	return Stream != nil && Stream.State() == gumbleffmpeg.StatePlaying
+func (player *Player) IsPlaying() bool {
+	return player.Stream != nil && player.Stream.State() == gumbleffmpeg.StatePlaying
 }
 
-func Stop() {
-	if IsPlaying() {
-		Stream.Stop() //#nosec G104 -- Only error this will respond with is stream not playing.
+func (player *Player) Stop() {
+	if player.IsPlaying() {
+		player.Stream.Stop() //#nosec G104 -- Only error this will respond with is stream not playing.
 	}
 }
 
-func PlayFile(path string, client *gumble.Client) {
-	Stream = gumbleffmpeg.New(client, gumbleffmpeg.SourceFile(path))
-	Stream.Volume = config.VolumeLevel
+func (player *Player) PlayFile(path string) {
+	player.Stream = gumbleffmpeg.New(player.client, gumbleffmpeg.SourceFile(path))
+	player.Stream.Volume = config.VolumeLevel
 
-	if err := Stream.Play(); err != nil {
+	if err := player.Stream.Play(); err != nil {
 		helper.DebugPrintln(err)
 	} else {
 		helper.DebugPrintln("Playing:", path)
@@ -81,17 +128,17 @@ func PlayFile(path string, client *gumble.Client) {
 }
 
 // Play youtube video
-func PlayYT(url string, client *gumble.Client) {
+func (player *Player) PlayYT(url string) {
 	url = helper.StripHTMLTags(url)
 	if youtubedl.IsWhiteListedURL(url) == false {
 		log.Printf("PlayYT Failed: URL %s Doesn't meet whitelist", url)
 		return
 	}
 
-	Stream = gumbleffmpeg.New(client, youtubedl.GetYtdlSource(url))
-	Stream.Volume = config.VolumeLevel
+	player.Stream = gumbleffmpeg.New(player.client, youtubedl.GetYtdlSource(url))
+	player.Stream.Volume = config.VolumeLevel
 
-	if err := Stream.Play(); err != nil {
+	if err := player.Stream.Play(); err != nil {
 		helper.DebugPrintln(err)
 	} else {
 		helper.DebugPrintln("Playing:", url)
