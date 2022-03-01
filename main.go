@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/iotku/mumzic/playback"
 	"log"
 	"os"
 	"strings"
@@ -34,7 +35,9 @@ func main() {
 			} else {
 				fmt.Println("Not Joining", config.LastChannel)
 			}
-
+			helper.MainClient = e.Client
+			playback.Players = make([]*playback.Player, 31)
+			playback.Players[0] = playback.NewPlayer(e.Client, "")
 		},
 		TextMessage: func(e *gumble.TextMessageEvent) {
 			if e.Sender == nil {
