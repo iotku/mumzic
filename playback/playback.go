@@ -97,6 +97,7 @@ func (player *Player) Play(path string) {
 	} else {
 		player.PlayFile(path)
 	}
+	player.DoNext = "next"
 
 	helper.ChanMsg(player.client, "Now Playing: "+player.Playlist.GetCurrentHuman())
 	player.client.Self.SetComment("Now Playing: " + player.Playlist.GetCurrentHuman())

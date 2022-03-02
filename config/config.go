@@ -9,7 +9,7 @@ import (
 )
 
 // Max amount of lines you wish commands to output (before hopefully, going into an unimplemented more buffer)
-var MaxLines = 5
+var MaxLines = 10
 
 // Database generated from gendb
 var Songdb = "./media.db"

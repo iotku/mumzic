@@ -40,10 +40,6 @@ func play(id string, sender string, isPrivate bool, player *playback.Player) {
 	if !player.Playlist.IsEmpty() && player.IsStopped() { // Recover from stopped player.
 		player.PlayCurrent()
 	}
-
-	if player.IsPlaying() {
-		player.DoNext = "next"
-	}
 }
 
 func PlaybackControls(player *playback.Player, message string, isPrivate bool, sender string) bool {
@@ -64,11 +60,15 @@ func PlaybackControls(player *playback.Player, message string, isPrivate bool, s
 			amount = config.MaxLines
 		}
 
+		output := "TrackList: <pre>"
 		for i, line := range player.Playlist.GetList(amount) {
-			helper.MsgDispatch(player.GetClient(), isPrivate, sender, fmt.Sprintf("# %d: %s\n", i, line))
+			output += fmt.Sprintf("# %d: <b>%s</b>\n", i, line)
+		}
+		output += "</pre>"
+		if output != "<pre></pre>" {
+			helper.MsgDispatch(player.GetClient(), isPrivate, sender, output+fmt.Sprintf("%d Track(s) queued.\n", player.Playlist.Size()-current))
 		}
 
-		helper.MsgDispatch(player.GetClient(), isPrivate, sender, fmt.Sprintf("%d Track(s) Queued.\n", player.Playlist.Size()-current))
 		return true
 	}
 
@@ -141,15 +141,19 @@ func SearchCommands(player *playback.Player, message string, isPrivate bool, sen
 		}
 		plistOrigSize := player.Playlist.Size()
 		hadNext := player.Playlist.HasNext()
+		output := "Random Add: <pre>"
 		for i := 0; i < value; i++ {
 			id := randsrc.Intn(search.MaxDBID)
 			trackName, err := player.Playlist.AddToQueue(strconv.Itoa(id))
 			if err == nil {
-				helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Added: "+trackName)
+				output += fmt.Sprintf("Added: <b>%s</b>\n", trackName)
 			} else {
-				helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Error: "+err.Error())
+				output += fmt.Sprintf("Error: <b>%s</b>\n", err.Error())
 			}
 		}
+		output += "</pre>"
+		helper.MsgDispatch(player.GetClient(), isPrivate, sender, output)
+
 		if !player.IsPlaying() && plistOrigSize == 0 {
 			player.PlayCurrent()
 		} else if !player.IsPlaying() && !hadNext {
@@ -161,12 +165,15 @@ func SearchCommands(player *playback.Player, message string, isPrivate bool, sen
 
 	if isCommand(message, "search ") {
 		results := search.SearchALL(helper.LazyRemovePrefix(message, "search "))
+		output := "Search Results: <pre>"
 		for i, v := range results {
-			helper.MsgDispatch(player.GetClient(), isPrivate, sender, v)
+			output += v + "\n"
 			if i == config.MaxLines { // TODO, Send extra results into 'more' buffer
 				break
 			}
 		}
+		output += "</pre>"
+		helper.MsgDispatch(player.GetClient(), isPrivate, sender, output)
 		return true
 	}
 

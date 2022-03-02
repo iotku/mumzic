@@ -32,6 +32,7 @@ func init() {
 	go watchMsgChan()
 }
 
+// watchMsgChan waits on the msgChan for incoming messages and rate limits the output in an attempt to avoid rate limits
 func watchMsgChan() {
 	for {
 		bundle := <-msgChan
@@ -42,7 +43,7 @@ func watchMsgChan() {
 		currentTime := time.Now()
 
 		// Buffering logic to avoid messages being dropped by sending too fast
-		// TODO: Should the cooldown for private messages be the same as for main channel messages?
+		// TODO: Should the cooldown for private messages remain the same as for main channel messages?
 		if msgLastSentTime.Add(5 * time.Second).Before(currentTime) {
 			msgBurstCount = 1
 		} else {
@@ -94,7 +95,7 @@ func MsgDispatch(client *gumble.Client, isPrivate bool, username string, msg str
 	}
 }
 
-// Remove prefix from command for single argument (I.E. "!play 22" -> "22")
+// LazyRemovePrefix gets the remaining text from a command invocation excluding the command prefix and command name (I.E. "!play 22" -> "22")
 func LazyRemovePrefix(message, prefix string) string {
 	if strings.HasPrefix(message, config.CmdPrefix) {
 		return strings.TrimSpace(message[len(config.CmdPrefix+prefix):])
