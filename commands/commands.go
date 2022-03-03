@@ -41,10 +41,40 @@ func play(id string, sender string, isPrivate bool, player *playback.Player) {
 	}
 }
 
-func preStringBuilder(title string) *strings.Builder{
-    var out strings.Builder
-    fmt.Fprintf(&out, "<h2>%s</h2> <pre>", title)
-    return &out
+type messageTable struct {
+    table *strings.Builder
+    cols int
+}
+
+func makeTable(header string, columns ...string) messageTable {
+    var b strings.Builder
+    fmt.Fprintf(&b, "<h2 style=\"margin-top:16px; margin-bottom:2px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><b><u><span style=\"font-size:x-large\">%s</span></u></b></h2>", header)
+    fmt.Fprintf(&b, "<table align=\"left\" border=\"0\" style=\"margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;\" cellspacing=\"2\" cellpadding=\"0\"><thead>")
+    if len(columns) != 0 {
+        fmt.Fprintf(&b, "<tr>")
+    }
+    for _, v := range columns {
+        fmt.Fprintf(&b, "<th align=\"left\">%s</th>", v)
+    }
+    if len(columns) != 0 {
+        fmt.Fprintf(&b, "</tr>")
+    }
+    fmt.Fprintf(&b, "</thead><tbody>")
+    return messageTable{&b, len(columns)}
+}
+
+func (msgTbl messageTable) addRow(cells ...string) {
+    fmt.Fprintf(msgTbl.table, "<tr>")
+    for _,v := range cells {
+        fmt.Fprintf(msgTbl.table, "<td><p>%s</p></td>", v)
+    }
+    fmt.Fprintf(msgTbl.table, "</tr>")
+}
+
+func (msgTbl messageTable) String() string{
+    fmt.Fprintf(msgTbl.table, "</tbody></table>")
+    println("Got here")
+    return msgTbl.table.String()
 }
 
 func PlaybackControls(player *playback.Player, message string, isPrivate bool, sender string) bool {
@@ -73,12 +103,12 @@ func PlaybackControls(player *playback.Player, message string, isPrivate bool, s
 			amount = config.MaxLines
 		}
 
-		output := preStringBuilder("Track list")
+        output := makeTable("Playlist", "#", "Track Name")
 		for i, line := range player.Playlist.GetList(amount) {
-			fmt.Fprintf(output, "# %d: <b>%s</b>\n", i, line)
+			output.addRow(strconv.Itoa(i), line)
 		}
-		fmt.Fprintf(output, "</pre>%d Track(s) queued.", player.Playlist.Size()-current)
-
+        output.addRow("---")
+        output.addRow(strconv.Itoa(player.Playlist.Size()-current), " Track(s) queued.")
         helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
 
 		return true
@@ -153,17 +183,16 @@ func SearchCommands(player *playback.Player, message string, isPrivate bool, sen
 		plistOrigSize := player.Playlist.Size()
 		hadNext := player.Playlist.HasNext()
 
-        output := preStringBuilder("Randomly Added")
+        output := makeTable("Randomly Added")
 		for i := 0; i < value; i++ {
 			id := randsrc.Intn(search.MaxDBID)
 			trackName, err := player.Playlist.AddToQueue(strconv.Itoa(id))
 			if err == nil {
-				fmt.Fprintf(output, "Added: <b>%s</b>\n", trackName)
+                output.addRow("Added: <b>" + trackName + "</b>")
 			} else {
-				fmt.Fprintf(output, "Error: <b>%s</b>\n", err.Error())
+                output.addRow("Error: <b>" + err.Error() + "</b>")
 			}
 		}
-		fmt.Fprintf(output, "</pre>")
 		helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
 
 		if !player.IsPlaying() && plistOrigSize == 0 {
@@ -177,14 +206,13 @@ func SearchCommands(player *playback.Player, message string, isPrivate bool, sen
 
 	if isCommand(message, "search ") {
 		results := search.SearchALL(helper.LazyRemovePrefix(message, "search "))
-        output := preStringBuilder("Search Results")
+        output := makeTable("Search Results")
 		for i, v := range results {
-            fmt.Fprintf(output, "%s\n", v)
+            output.addRow(v)
 			if i == config.MaxLines { // TODO, Send extra results into 'more' buffer
 				break
 			}
 		}
-        fmt.Fprintf(output, "</pre>")
 		helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
 		return true
 	}
