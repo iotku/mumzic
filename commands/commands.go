@@ -25,7 +25,6 @@ func AddSongToQueue(id string, sender string, isPrivate bool, player *playback.P
 }
 
 func play(id string, sender string, isPrivate bool, player *playback.Player) {
-	// This is still really scuffed
 	if id != "" && player.IsStopped() { // Has argument
 		if player.Playlist.IsEmpty() && AddSongToQueue(id, sender, isPrivate, player) {
 			player.PlayCurrent()
@@ -42,8 +41,22 @@ func play(id string, sender string, isPrivate bool, player *playback.Player) {
 	}
 }
 
+func preStringBuilder(title string) *strings.Builder{
+    var out strings.Builder
+    fmt.Fprintf(&out, "<h2>%s</h2> <pre>", title)
+    return &out
+}
+
 func PlaybackControls(player *playback.Player, message string, isPrivate bool, sender string) bool {
 	helper.DebugPrintln("IsPlaying:", player.IsPlaying(), "DoNext:", player.DoNext)
+
+    if isCommand(message, "target") {
+        player.AddTarget(sender)
+    }
+
+    if isCommand(message, "untarget") {
+        player.RemoveTarget(sender)
+    }
 
 	if isCommand(message, "play") {
 		id := helper.LazyRemovePrefix(message, "play")
@@ -60,14 +73,13 @@ func PlaybackControls(player *playback.Player, message string, isPrivate bool, s
 			amount = config.MaxLines
 		}
 
-		output := "TrackList: <pre>"
+		output := preStringBuilder("Track list")
 		for i, line := range player.Playlist.GetList(amount) {
-			output += fmt.Sprintf("# %d: <b>%s</b>\n", i, line)
+			fmt.Fprintf(output, "# %d: <b>%s</b>\n", i, line)
 		}
-		output += "</pre>"
-		if output != "<pre></pre>" {
-			helper.MsgDispatch(player.GetClient(), isPrivate, sender, output+fmt.Sprintf("%d Track(s) queued.\n", player.Playlist.Size()-current))
-		}
+		fmt.Fprintf(output, "</pre>%d Track(s) queued.", player.Playlist.Size()-current)
+
+        helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
 
 		return true
 	}
@@ -133,26 +145,26 @@ func SearchCommands(player *playback.Player, message string, isPrivate bool, sen
 			return true
 		}
 		seed := rand.NewSource(time.Now().UnixNano())
-		//#nosec G404 -- Cryptographic randomness is not required
-		randsrc := rand.New(seed)
+		randsrc := rand.New(seed) //#nosec G404 -- Cryptographic randomness is not required
 
 		if value > config.MaxLines {
 			value = config.MaxLines
 		}
 		plistOrigSize := player.Playlist.Size()
 		hadNext := player.Playlist.HasNext()
-		output := "Random Add: <pre>"
+
+        output := preStringBuilder("Randomly Added")
 		for i := 0; i < value; i++ {
 			id := randsrc.Intn(search.MaxDBID)
 			trackName, err := player.Playlist.AddToQueue(strconv.Itoa(id))
 			if err == nil {
-				output += fmt.Sprintf("Added: <b>%s</b>\n", trackName)
+				fmt.Fprintf(output, "Added: <b>%s</b>\n", trackName)
 			} else {
-				output += fmt.Sprintf("Error: <b>%s</b>\n", err.Error())
+				fmt.Fprintf(output, "Error: <b>%s</b>\n", err.Error())
 			}
 		}
-		output += "</pre>"
-		helper.MsgDispatch(player.GetClient(), isPrivate, sender, output)
+		fmt.Fprintf(output, "</pre>")
+		helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
 
 		if !player.IsPlaying() && plistOrigSize == 0 {
 			player.PlayCurrent()
@@ -165,15 +177,15 @@ func SearchCommands(player *playback.Player, message string, isPrivate bool, sen
 
 	if isCommand(message, "search ") {
 		results := search.SearchALL(helper.LazyRemovePrefix(message, "search "))
-		output := "Search Results: <pre>"
+        output := preStringBuilder("Search Results")
 		for i, v := range results {
-			output += v + "\n"
+            fmt.Fprintf(output, "%s\n", v)
 			if i == config.MaxLines { // TODO, Send extra results into 'more' buffer
 				break
 			}
 		}
-		output += "</pre>"
-		helper.MsgDispatch(player.GetClient(), isPrivate, sender, output)
+        fmt.Fprintf(output, "</pre>")
+		helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
 		return true
 	}
 

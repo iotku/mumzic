@@ -17,24 +17,62 @@ import (
 type Player struct {
 	Stream   *gumbleffmpeg.Stream
 	client   *gumble.Client
+    targets  []*gumble.User
 	Playlist playlist.List
 	volume   float32
 	DoNext   string
 }
 
-func TargetUser(client *gumble.Client, user string) {
-	client.VoiceTarget = &gumble.VoiceTarget{ID: uint32(2)}
-	client.VoiceTarget.AddUser(client.Users.Find(user))
-	userTarget := client.Users.Find(user)
+func (player *Player) AddTarget(username string) {
+    user := player.client.Users.Find(username)
+    if user == nil {
+        return // user not found
+    }
+    for _, v := range player.targets {
+        if v.UserID == user.UserID {
+            player.RemoveTarget(v.Name)
+            println("Retargeted: ", username)
+            break
+        }
+    }
+    player.targets = append(player.targets, user)
+    player.targetUsers()
+    println("Added: ", username)
+}
+
+func (player *Player) RemoveTarget(username string) {
+    user := player.client.Users.Find(username)
+    for i, v := range player.targets {
+        if v.UserID == user.UserID {
+            player.targets = append(player.targets[:i], player.targets[i+1:]...)
+            println("Removed: ", username)
+            player.targetUsers()
+            return
+        }
+    }
+}
+
+func (player *Player) targetUsers() {
+	player.client.VoiceTarget = &gumble.VoiceTarget{ID: uint32(2)}
+
+    player.client.VoiceTarget.AddChannel(player.client.Self.Channel, false, false, "radio")
+    ownChannel := player.client.Self.Channel
 	packet := MumbleProto.VoiceTarget{
-		Id:      &client.VoiceTarget.ID,
-		Targets: make([]*MumbleProto.VoiceTarget_Target, 0, 1),
+		Id:      &player.client.VoiceTarget.ID,
+		Targets: make([]*MumbleProto.VoiceTarget_Target, 0, len(player.targets)+1),
 	}
+    for _, v := range player.targets {
+        player.client.VoiceTarget.AddUser(v)
+        packet.Targets = append(packet.Targets, &MumbleProto.VoiceTarget_Target{
+            Session: []uint32{v.Session},
+        })
+	}
+
 	packet.Targets = append(packet.Targets, &MumbleProto.VoiceTarget_Target{
-		Session: []uint32{userTarget.Session},
+        ChannelId: &ownChannel.ID,
 	})
 
-	err := client.Conn.WriteProto(&packet)
+	err := player.client.Conn.WriteProto(&packet)
 	if err != nil {
 		log.Println(err)
 	}
@@ -44,6 +82,7 @@ func NewPlayer(client *gumble.Client) *Player {
 	return &Player{
 		Stream: nil,
 		client: client,
+        targets: make([]*gumble.User, 0),
 		Playlist: playlist.List{
 			Playlist: make([][]string, 0),
 			Position: 0,
