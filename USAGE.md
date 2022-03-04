@@ -8,13 +8,13 @@
 | !stop             | Stop playing track                    | If you use !play with no arguments; will restart track from beginning     |
 | !rand [#]         | Add Random Tracks                     | Random track(s) from filesystem (Limit 5)                                 |
 | !volume (1-9)     | Set Volume                            | Eventually will be percentage based                                       |
+| !target           | Send audio to you directly            | Works no matter what channel you are in as long as Whispers are enabled   |
+| !untarget         | Don't send audio to you directly      | Remove you from audio targetting list                                     |
 
 ## Generating a local media.db (for local file playback)
 
-Currently "gendb" ([found here](https://github.com/iotku/genMusicSQLiteDB)) is used to create a local database of Music files for the bot to play and is built seperately (go build/go install in the gendb directory).
+Currently "genMusicSQLiteDB" ([found here](https://github.com/iotku/genMusicSQLiteDB)) is used to create a local database of local files for the bot to play.
+Without a media.db present only ytdl links will work.
 
 ### Create media.db for mumzic
 `$ gendb [path/to/music/directory]`
-
-### Supported Formats
-Currently the gendb program only looks for .flac files because I'm a snob, this should be able to change in the future.
