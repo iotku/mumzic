@@ -1,12 +1,22 @@
 ## Command List
+### Playback
 | Command           | Info                                  | Notes                                                                     |
 |-------------------|---------------------------------------|---------------------------------------------------------------------------|
 | !play [id or URL] | Play track via ID                     | Numberic IDs (found with !search) or Youtube/Soundcloud URL               |
-| !search           | Find tracks from local files          |                                                                           |
-| !list             | Show current track list               |                                                                           |
-| !skip [#]         | skip # amount of tracks               | Default 1                                                                 |
+| !rand [#]         | Add Random Tracks                     | Random track(s) from filesystem                                           |
 | !stop             | Stop playing track                    | If you use !play with no arguments; will restart track from beginning     |
-| !rand [#]         | Add Random Tracks                     | Random track(s) from filesystem (Limit 5)                                 |
+| !skip [#]         | skip # amount of tracks               | Default 1                                                                 |
+
+
+### Playlist
+| Command           | Info                                  | Notes                                                                     |
+|-------------------|---------------------------------------|---------------------------------------------------------------------------|
+| !list             | Show current track list               |                                                                           |
+| !search           | Find tracks from local files          |                                                                           |
+
+### Audio
+| Command           | Info                                  | Notes                                                                     |
+|-------------------|---------------------------------------|---------------------------------------------------------------------------|
 | !volume (1-9)     | Set Volume                            | Eventually will be percentage based                                       |
 | !target           | Send audio to you directly            | Works no matter what channel you are in as long as Whispers are enabled   |
 | !untarget         | Don't send audio to you directly      | Remove you from audio targetting list                                     |
