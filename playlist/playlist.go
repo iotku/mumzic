@@ -101,7 +101,7 @@ func (list *List) AddToQueue(path string) (string, error) {
 
 	// FOR IDs
 	idn, _ := strconv.Atoi(path)
-	human := list.queueID(idn)
+	human := list.QueueID(idn)
 	if human != "" {
 		return human, nil
 	}
@@ -113,7 +113,7 @@ func (list *List) pAdd(path, human string) {
 	list.Playlist = append(list.Playlist, []string{path, human})
 }
 
-func (list *List) queueID(trackID int) (human string) {
+func (list *List) QueueID(trackID int) (human string) {
 	if trackID > search.MaxDBID || trackID < 1 {
 		return ""
 	}

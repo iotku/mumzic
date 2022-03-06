@@ -2,10 +2,8 @@ package commands
 
 import (
 	"fmt"
-	"math/rand"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/iotku/mumzic/config"
 	"github.com/iotku/mumzic/helper"
@@ -142,8 +140,6 @@ func SearchCommands(player *playback.Player, message string, isPrivate bool, sen
 		if err != nil {
 			return true
 		}
-		seed := rand.NewSource(time.Now().UnixNano())
-		randsrc := rand.New(seed) //#nosec G404 -- Cryptographic randomness is not required
 
 		if value > config.MaxLines {
 			value = config.MaxLines
@@ -152,13 +148,13 @@ func SearchCommands(player *playback.Player, message string, isPrivate bool, sen
 		hadNext := player.Playlist.HasNext()
 
         output := makeTable("Randomly Added")
-		for i := 0; i < value; i++ {
-			id := randsrc.Intn(search.MaxDBID)
-			trackName, err := player.Playlist.AddToQueue(strconv.Itoa(id))
-			if err == nil {
-                output.addRow("Added: <b>" + trackName + "</b>")
+        idList := search.GetRandomTrackIDs(value)
+        for _, v := range idList {
+            human := player.Playlist.QueueID(v)
+			if human != "" {
+                output.addRow("Added: <b>" + human + "</b>")
 			} else {
-                output.addRow("Error: <b>" + err.Error() + "</b>")
+                output.addRow("Error: <b>" + "failed to add ID#" + strconv.Itoa(v) + "</b>")
 			}
 		}
 		helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())

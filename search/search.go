@@ -3,9 +3,11 @@ package search
 import (
 	"database/sql"
 	"fmt"
+	"log"
+	"os"
+
 	"github.com/iotku/mumzic/config"
 	_ "github.com/mattn/go-sqlite3"
-	"os"
 )
 
 var MaxDBID int
@@ -35,6 +37,28 @@ func getMaxID(database string) int {
 	err = db.QueryRow("select max(ROWID) from music;").Scan(&count)
 	checkErrPanic(err)
 	return count
+}
+
+func GetRandomTrackIDs(amount int) []int {
+    if getMaxID(config.Songdb) == 0 {
+        return make([]int, 0)
+    }
+
+    db, err := sql.Open("sqlite3", config.Songdb)
+    defer db.Close()
+    checkErrPanic(err)
+    var rows *sql.Rows
+    var idList []int
+    rows, err = db.Query("SELECT ROWID from music ORDER BY random() LIMIT ?", amount)
+    checkErrPanic(err) 
+    for rows.Next() {
+        var id int
+        if err = rows.Scan(&id); err != nil {
+            log.Fatalln("GetRandomTrackIDs failed to scan rows.")
+        }
+        idList = append(idList, id)
+    }
+    return idList
 }
 
 // Query SQLite database to get filepath related to ID
