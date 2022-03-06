@@ -137,8 +137,8 @@ func SearchCommands(player *playback.Player, message string, isPrivate bool, sen
 	if isCommand(message, "rand") {
 		howMany := helper.LazyRemovePrefix(message, "rand")
 		value, err := strconv.Atoi(howMany)
-		if err != nil {
-			return true
+		if err != nil || value < 1 {
+            value = 1
 		}
 
 		if value > config.MaxLines {
