@@ -11,6 +11,42 @@ import (
 	"github.com/iotku/mumzic/search"
 )
 
+func CommandDispatch(player *playback.Player, message string, isPrivate bool, sender string) {
+	helper.DebugPrintln("IsPlaying:", player.IsPlaying(), "DoNext:", player.DoNext)
+	command, arg := getCommandAndArg(message, isPrivate)
+
+	switch command {
+	case "play":
+		play(arg, sender, isPrivate, player)
+	case "stop":
+		player.DoNext = "stop"
+		player.Stop()
+	case "skip":
+		value, err := strconv.Atoi(arg)
+		if err != nil {
+			player.Skip(1)
+		} else {
+			player.Skip(value)
+		}
+	case "vol", "volume":
+		vol(player, sender, isPrivate, arg)
+	case "list":
+		list(player, sender, isPrivate)
+	case "target":
+		player.AddTarget(sender)
+	case "untarget":
+		player.RemoveTarget(sender)
+	case "help":
+		helper.MsgDispatch(player.GetClient(), isPrivate, sender, "https://github.com/iotku/mumzic/blob/master/USAGE.md")
+	case "rand":
+		rand(player, sender, isPrivate, arg)
+	case "search", "find":
+		find(player, sender, isPrivate, arg)
+	case "saveconf":
+		config.SaveConfig()
+	}
+}
+
 func AddSongToQueue(id string, sender string, isPrivate bool, player *playback.Player) bool {
 	queued, err := player.Playlist.AddToQueue(id)
 	if err != nil {
@@ -20,6 +56,22 @@ func AddSongToQueue(id string, sender string, isPrivate bool, player *playback.P
 
 	helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Queued: "+queued)
 	return true
+}
+
+func getCommandAndArg(message string, isPrivate bool) (command string, arg string) {
+	var offset int
+	if !isPrivate && strings.HasPrefix(message, config.CmdPrefix) {
+		message = message[len(config.CmdPrefix):]
+	} else if strings.HasPrefix(message, helper.BotUsername) {
+		offset = 1
+	}
+	split := strings.Split(message, " ")
+	for i := offset + 1; i < len(split); i++ {
+		arg += split[i] + " "
+	}
+	arg = strings.TrimSpace(arg)
+
+	return strings.ToLower(split[offset]), arg
 }
 
 func play(id string, sender string, isPrivate bool, player *playback.Player) {
@@ -39,157 +91,75 @@ func play(id string, sender string, isPrivate bool, player *playback.Player) {
 	}
 }
 
-func PlaybackControls(player *playback.Player, message string, isPrivate bool, sender string) bool {
-	helper.DebugPrintln("IsPlaying:", player.IsPlaying(), "DoNext:", player.DoNext)
-
-    if isCommand(message, "help") {
-        helper.MsgDispatch(player.GetClient(), isPrivate, sender, "https://github.com/iotku/mumzic/blob/master/USAGE.md")
-    }
-
-    if isCommand(message, "target") {
-        player.AddTarget(sender)
-    }
-
-    if isCommand(message, "untarget") {
-        player.RemoveTarget(sender)
-    }
-
-	if isCommand(message, "play") {
-		id := helper.LazyRemovePrefix(message, "play")
-		play(id, sender, isPrivate, player)
-		return true
-	}
-
-	if isCommand(message, "list") {
-		current := player.Playlist.Position
-		amount := player.Playlist.Size() - current
-
-		// TODO: Send to more buffer
-		if amount > config.MaxLines {
-			amount = config.MaxLines
-		}
-
-        output := makeTable("Playlist", "#", "Track Name")
-		for i, line := range player.Playlist.GetList(amount) {
-			output.addRow(strconv.Itoa(i), line)
-		}
-        output.addRow("---")
-        output.addRow(strconv.Itoa(player.Playlist.Size()-current), " Track(s) queued.")
-        helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
-
-		return true
-	}
-
-	// If Stream object doesn't exist yet, don't do anything to avoid dereference
-	if player.Stream == nil {
-		return false
-	}
-
-	// Stop Playback
-	if isCommand(message, "stop") {
-		player.DoNext = "stop"
-		err := player.Stream.Stop()
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		return true
-	}
-
-	// Set volume
+func vol(player *playback.Player, sender string, isPrivate bool, arg string) {
 	// TODO: At some point consider switching to percentage based system
-	if isCommand(message, "vol ") {
-		message = "." + helper.LazyRemovePrefix(message, "vol")
-		value, err := strconv.ParseFloat(message, 32)
-
+	if arg != "" {
+		value, err := strconv.ParseFloat("."+arg, 32)
 		if err == nil {
-			fmt.Println("Current Volume: ", value)
-			config.VolumeLevel = float32(value)
-			player.Stream.Volume = float32(value)
+			player.SetVolume(float32(value))
 		}
-		return true
+	} else {
+		helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Current Volume: "+fmt.Sprintf("%f", player.Volume))
+	}
+}
+
+func list(player *playback.Player, sender string, isPrivate bool) {
+	current := player.Playlist.Position
+	amount := player.Playlist.Size() - current
+
+	// TODO: Send to more buffer
+	if amount > config.MaxLines {
+		amount = config.MaxLines
 	}
 
-	// Send current volume to channel
-	if isCommand(message, "vol") {
-		helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Current Volume: "+fmt.Sprintf("%f", player.Stream.Volume))
-		return true
+	output := makeTable("Playlist", "#", "Track Name")
+	for i, line := range player.Playlist.GetList(amount) {
+		output.addRow(strconv.Itoa(i), line)
+	}
+	output.addRow("---")
+	output.addRow(strconv.Itoa(player.Playlist.Size()-current), " Track(s) queued.")
+	helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
+}
+
+func find(player *playback.Player, sender string, isPrivate bool, arg string) {
+	results := search.SearchALL(arg)
+	output := makeTable("Search Results")
+	for i, v := range results {
+		output.addRow(v)
+		if i == config.MaxLines { // TODO, Send extra results into 'more' buffer
+			break
+		}
+	}
+	helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
+}
+
+func rand(player *playback.Player, sender string, isPrivate bool, arg string) {
+	value, err := strconv.Atoi(arg)
+	if err != nil || value < 1 {
+		value = 1
 	}
 
-	// Skip to next track in playlist
-	if isCommand(message, "skip") {
-		howMany := helper.LazyRemovePrefix(message, "skip")
-		value, err := strconv.Atoi(howMany)
-		if err != nil {
-			player.Skip(1)
+	if value > config.MaxLines {
+		value = config.MaxLines
+	}
+	plistOrigSize := player.Playlist.Size()
+	hadNext := player.Playlist.HasNext()
+
+	output := makeTable("Randomly Added")
+	idList := search.GetRandomTrackIDs(value)
+	for _, v := range idList {
+		human := player.Playlist.QueueID(v)
+		if human != "" {
+			output.addRow("Added: <b>" + human + "</b>")
 		} else {
-			player.Skip(value)
+			output.addRow("Error: <b>" + "failed to add ID#" + strconv.Itoa(v) + "</b>")
 		}
-		return true
 	}
+	helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
 
-	return false
-}
-
-func SearchCommands(player *playback.Player, message string, isPrivate bool, sender string) bool {
-	if search.MaxDBID == 0 {
-		return true
-	} // Don't perform any database related commands if the database doesn't exist (or contains no rows)
-	if isCommand(message, "rand") {
-		howMany := helper.LazyRemovePrefix(message, "rand")
-		value, err := strconv.Atoi(howMany)
-		if err != nil || value < 1 {
-            value = 1
-		}
-
-		if value > config.MaxLines {
-			value = config.MaxLines
-		}
-		plistOrigSize := player.Playlist.Size()
-		hadNext := player.Playlist.HasNext()
-
-        output := makeTable("Randomly Added")
-        idList := search.GetRandomTrackIDs(value)
-        for _, v := range idList {
-            human := player.Playlist.QueueID(v)
-			if human != "" {
-                output.addRow("Added: <b>" + human + "</b>")
-			} else {
-                output.addRow("Error: <b>" + "failed to add ID#" + strconv.Itoa(v) + "</b>")
-			}
-		}
-		helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
-
-		if !player.IsPlaying() && plistOrigSize == 0 {
-			player.PlayCurrent()
-		} else if !player.IsPlaying() && !hadNext {
-			player.Skip(1)
-		}
-
-		return true
+	if !player.IsPlaying() && plistOrigSize == 0 {
+		player.PlayCurrent()
+	} else if !player.IsPlaying() && !hadNext {
+		player.Skip(1)
 	}
-
-	if isCommand(message, "search ") {
-		results := search.SearchALL(helper.LazyRemovePrefix(message, "search "))
-        output := makeTable("Search Results")
-		for i, v := range results {
-            output.addRow(v)
-			if i == config.MaxLines { // TODO, Send extra results into 'more' buffer
-				break
-			}
-		}
-		helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
-		return true
-	}
-
-	if isCommand(message, "saveconf") {
-		config.SaveConfig()
-		return true
-	}
-
-	return false
-}
-
-func isCommand(message, command string) bool {
-	return strings.HasPrefix(strings.ToLower(message), config.CmdPrefix+command) ||
-		strings.HasPrefix(strings.ToLower(command), helper.BotUsername+" "+command)
 }

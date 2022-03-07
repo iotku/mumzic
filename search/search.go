@@ -39,16 +39,15 @@ func getMaxID(database string) int {
 	return count
 }
 
-func GetRandomTrackIDs(amount int) []int {
+func GetRandomTrackIDs(amount int) (idList []int) {
     if getMaxID(config.Songdb) == 0 {
-        return make([]int, 0)
+        return 
     }
 
     db, err := sql.Open("sqlite3", config.Songdb)
     defer db.Close()
     checkErrPanic(err)
     var rows *sql.Rows
-    var idList []int
     rows, err = db.Query("SELECT ROWID from music ORDER BY random() LIMIT ?", amount)
     checkErrPanic(err) 
     for rows.Next() {
@@ -58,7 +57,7 @@ func GetRandomTrackIDs(amount int) []int {
         }
         idList = append(idList, id)
     }
-    return idList
+    return
 }
 
 // Query SQLite database to get filepath related to ID

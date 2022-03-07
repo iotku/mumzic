@@ -48,9 +48,8 @@ func main() {
 			isPrivate := len(e.TextMessage.Channels) == 0 // If no channels, is private message
 			logMessage(e, isPrivate)
 
-			if msgHasCommandPrefix(e) {
-				go commands.PlaybackControls(channelPlayer, e.Message, isPrivate, e.Sender.Name)
-				go commands.SearchCommands(channelPlayer, e.Message, isPrivate, e.Sender.Name)
+			if isCommand(e, isPrivate) {
+				go commands.CommandDispatch(channelPlayer, e.Message, isPrivate, e.Sender.Name)
 			}
 		},
 		ChannelChange: func(e *gumble.ChannelChangeEvent) {
@@ -74,6 +73,6 @@ func logMessage(e *gumble.TextMessageEvent, isPrivate bool) {
 	}
 }
 
-func msgHasCommandPrefix(e *gumble.TextMessageEvent) bool {
-	return strings.HasPrefix(e.Message, e.Client.Self.Name) || strings.HasPrefix(e.Message, config.CmdPrefix)
+func isCommand(e *gumble.TextMessageEvent, isPrivate bool) bool {
+	return strings.HasPrefix(e.Message, config.CmdPrefix) || strings.HasPrefix(e.Message, e.Client.Self.Name) || isPrivate
 }
