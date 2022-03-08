@@ -1,6 +1,7 @@
 package playback
 
 import (
+	"github.com/iotku/mumzic/commands"
 	"layeh.com/gumble/gumble/MumbleProto"
 	"log"
 	"strings"
@@ -36,8 +37,7 @@ func (player *Player) AddTarget(username string) {
 		}
 	}
 	player.targets = append(player.targets, user)
-	player.targetUsers()
-	println("Added: ", username)
+	player.TargetUsers()
 }
 
 func (player *Player) RemoveTarget(username string) {
@@ -45,18 +45,16 @@ func (player *Player) RemoveTarget(username string) {
 	for i, v := range player.targets {
 		if v.UserID == user.UserID {
 			player.targets = append(player.targets[:i], player.targets[i+1:]...)
-			println("Removed: ", username)
-			player.targetUsers()
+			player.TargetUsers()
 			return
 		}
 	}
 }
 
-func (player *Player) targetUsers() {
+func (player *Player) TargetUsers() {
 	player.client.VoiceTarget = &gumble.VoiceTarget{ID: uint32(2)}
-
-	player.client.VoiceTarget.AddChannel(player.client.Self.Channel, false, false, "radio")
 	ownChannel := player.client.Self.Channel
+	player.client.VoiceTarget.AddChannel(ownChannel, false, false, "radio")
 	packet := MumbleProto.VoiceTarget{
 		Id:      &player.client.VoiceTarget.ID,
 		Targets: make([]*MumbleProto.VoiceTarget_Target, 0, len(player.targets)+1),
@@ -114,8 +112,7 @@ func (player *Player) WaitForStop() {
 	player.stream.Wait()
 	switch player.DoNext {
 	case "stop":
-	//	client.Self.SetComment("Not Playing.")
-	// Do nothing
+		player.client.Self.SetComment("Not Playing.")
 	case "next":
 		if player.Playlist.HasNext() {
 			player.Playlist.Next()
@@ -138,8 +135,8 @@ func (player *Player) Play(path string) {
 	}
 	player.DoNext = "next"
 
-	helper.ChanMsg(player.client, "Now Playing: "+player.Playlist.GetCurrentHuman())
-	player.client.Self.SetComment("Now Playing: " + player.Playlist.GetCurrentHuman())
+	helper.ChanMsg(player.client, commands.GenerateCoverArtImg(commands.FindCoverArtPath(player))+"Now Playing: "+player.Playlist.GetCurrentHuman())
+	player.client.Self.SetComment(commands.GenerateCoverArtImg(commands.FindCoverArtPath(player)) + "Now Playing: " + player.Playlist.GetCurrentHuman())
 	go player.WaitForStop()
 }
 

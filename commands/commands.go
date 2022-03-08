@@ -16,12 +16,12 @@ func CommandDispatch(player *playback.Player, message string, isPrivate bool, se
 	command, arg := getCommandAndArg(message, isPrivate)
 
 	switch command {
-	case "play":
+	case "play", "add":
 		play(arg, sender, isPrivate, player)
 	case "stop":
 		player.DoNext = "stop"
 		player.Stop()
-	case "skip":
+	case "skip", "next":
 		value, err := strconv.Atoi(arg)
 		if err != nil {
 			player.Skip(1)

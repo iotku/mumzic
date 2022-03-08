@@ -49,6 +49,7 @@ func LoadConfig(hostname string) {
 	}
 }
 
+// SaveConfig writes the current configuraiton to the configuration sqlite database
 func SaveConfig() {
 	fmt.Println("Writing configuration to disk")
 	db := openDB(configPath)
