@@ -1,7 +1,7 @@
 package playback
 
 import (
-	"github.com/iotku/mumzic/commands"
+	"github.com/iotku/mumzic/messages"
 	"layeh.com/gumble/gumble/MumbleProto"
 	"log"
 	"strings"
@@ -45,13 +45,18 @@ func (player *Player) RemoveTarget(username string) {
 	for i, v := range player.targets {
 		if v.UserID == user.UserID {
 			player.targets = append(player.targets[:i], player.targets[i+1:]...)
-			player.TargetUsers()
-			return
+			break
 		}
 	}
+	player.TargetUsers()
 }
 
 func (player *Player) TargetUsers() {
+	if len(player.targets) == 0 {
+		player.client.VoiceTarget = nil
+		return
+	}
+	println("Target usrs and chan")
 	player.client.VoiceTarget = &gumble.VoiceTarget{ID: uint32(2)}
 	ownChannel := player.client.Self.Channel
 	player.client.VoiceTarget.AddChannel(ownChannel, false, false, "radio")
@@ -135,8 +140,24 @@ func (player *Player) Play(path string) {
 	}
 	player.DoNext = "next"
 
-	helper.ChanMsg(player.client, commands.GenerateCoverArtImg(commands.FindCoverArtPath(player))+"Now Playing: "+player.Playlist.GetCurrentHuman())
-	player.client.Self.SetComment(commands.GenerateCoverArtImg(commands.FindCoverArtPath(player)) + "Now Playing: " + player.Playlist.GetCurrentHuman())
+	artPath := messages.FindCoverArtPath(player.Playlist.GetCurrentPath())
+	var artImg string
+	if artPath != "" {
+		artImg = messages.GenerateCoverArtImg(artPath)
+	}
+	//output := artImg
+	output := " <h2><u>Now Playing</u></h2><table><tr><td>" +
+		artImg + "</td><td>" +
+		"<table><tr><td>" +
+		player.Playlist.GetCurrentHuman() +
+		"</td></tr>" +
+		//"<tr><td>Another row :)</td></tr></table>" +
+		"</td></tr></table>"
+
+	// println("NoIMG Limit: ", len(output) > messages.MAX_MESSAGE_LENGTH_WITHOUT_IMAGE)
+	// println("IMG Limit: ", len(output) > messages.MAX_MESSAGE_LENGTH_WITH_IMAGE)
+	helper.ChanMsg(player.client, output)
+	player.client.Self.SetComment(output)
 	go player.WaitForStop()
 }
 

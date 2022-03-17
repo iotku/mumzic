@@ -1,28 +1,32 @@
-package commands
+package messages
 
 import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"github.com/iotku/mumzic/playback"
 	"github.com/nfnt/resize"
 	"image"
-	_ "image/jpeg"
-	"image/png"
+	"image/jpeg"
+	_ "image/png"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-type messageTable struct {
+type MessageTable struct {
 	table *strings.Builder
 	cols  int
 }
 
-// makeTable generates a html table with the first parameter as a header on top of the table
+const (
+	MAX_MESSAGE_LENGTH_WITH_IMAGE    = 131072
+	MAX_MESSAGE_LENGTH_WITHOUT_IMAGE = 5000
+)
+
+// MakeTable generates a html table with the first parameter as a header on top of the table
 // and subsequents as column headers for the table
-func makeTable(header string, columns ...string) messageTable {
+func MakeTable(header string, columns ...string) MessageTable {
 	var b strings.Builder
 	fmt.Fprintf(&b, "<h2 style=\"margin-top:16px; margin-bottom:2px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><b><u><span style=\"font-size:x-large\">%s</span></u></b></h2>", header)
 	fmt.Fprintf(&b, "<table align=\"left\" border=\"0\" style=\"margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;\" cellspacing=\"2\" cellpadding=\"0\"><thead>")
@@ -36,11 +40,11 @@ func makeTable(header string, columns ...string) messageTable {
 		fmt.Fprintf(&b, "</tr>")
 	}
 	fmt.Fprintf(&b, "</thead><tbody>")
-	return messageTable{&b, len(columns)}
+	return MessageTable{&b, len(columns)}
 }
 
-// addRow adds cells to a messageTable
-func (msgTbl messageTable) addRow(cells ...string) {
+// AddRow adds cells to a MessageTable
+func (msgTbl MessageTable) AddRow(cells ...string) {
 	fmt.Fprintf(msgTbl.table, "<tr>")
 	for _, v := range cells {
 		fmt.Fprintf(msgTbl.table, "<td><p>%s</p></td>", v)
@@ -48,41 +52,52 @@ func (msgTbl messageTable) addRow(cells ...string) {
 	fmt.Fprintf(msgTbl.table, "</tr>")
 }
 
-// String escapes the tbody and table elements of a messageTable and then returns a string of the messageTable
-func (msgTbl messageTable) String() string {
+// String escapes the tbody and table elements of a MessageTable and then returns a string of the MessageTable
+func (msgTbl MessageTable) String() string {
 	fmt.Fprintf(msgTbl.table, "</tbody></table>")
 	return msgTbl.table.String()
 }
 
-func FindCoverArtPath(player *playback.Player) string {
-	basedir := filepath.Dir(player.Playlist.GetCurrentPath())
+func FindCoverArtPath(playPath string) string {
+	basedir := filepath.Dir(playPath)
 	// Todo, robust matching
 	if _, err := os.Stat(basedir + "/cover.jpg"); err == nil {
-		return basedir + "cover.jpg"
+		return basedir + "/cover.jpg"
 	}
 	if _, err := os.Stat(basedir + "/cover.png"); err == nil {
-		return basedir + "cover.png"
+		return basedir + "/cover.png"
 	}
 	return ""
 }
 
 // generateCoverArtImage creates a base64 encoded html <img>
-// TODO: Check for filesize limits for mumble servers
+// TODO: Find a way to get generated cover art to follow the larger limits (for messages that contain images)
+//       for now, we make sure the image is less than maxSize to be well below the 5000 text limit the mumble server
+//       imposes by default for text messages (that contain no image)
 func GenerateCoverArtImg(filepath string) string {
 	img, err := decodeImage(filepath)
 	if err != nil {
 		log.Println("Failed to decode img: ", filepath, " ", err)
 		return ""
 	}
-	resizedImg := resize.Resize(200, 200, img, resize.Lanczos3)
+	resizedImg := resize.Resize(100, 100, img, resize.Lanczos3)
+	jpegQuality := 60
+	maxSize := 3000
 	var buf bytes.Buffer
-	if err := png.Encode(&buf, resizedImg); err != nil {
-		log.Println("Error encoding png for base64: ", filepath, " ", err)
-		return ""
+	for maxSize >= 3000 && jpegQuality > 0 {
+		buf.Reset()
+		options := jpeg.Options{Quality: jpegQuality}
+		if err := jpeg.Encode(&buf, resizedImg, &options); err != nil {
+			log.Println("Error encoding jpg for base64: ", filepath, " ", err)
+			return ""
+		}
+		maxSize = len(buf.Bytes())
+		jpegQuality -= 5 // Lower potential future jpegQuality if there's further passes
 	}
 
+	// Size Note: Grows ~1k bytes after encoding
 	encodedStr := base64.StdEncoding.EncodeToString(buf.Bytes())
-	return "<img src=\"data:img/png;base64, " + encodedStr + "\" />"
+	return "<img src=\"data:img/jpeg;base64, " + encodedStr + "\" />"
 }
 
 func decodeImage(filepath string) (image.Image, error) {
