@@ -1,6 +1,7 @@
 package playback
 
 import (
+	"github.com/iotku/mumzic/messages"
 	"layeh.com/gumble/gumble/MumbleProto"
 	"log"
 	"strings"
@@ -36,8 +37,7 @@ func (player *Player) AddTarget(username string) {
 		}
 	}
 	player.targets = append(player.targets, user)
-	player.targetUsers()
-	println("Added: ", username)
+	player.TargetUsers()
 }
 
 func (player *Player) RemoveTarget(username string) {
@@ -45,18 +45,21 @@ func (player *Player) RemoveTarget(username string) {
 	for i, v := range player.targets {
 		if v.UserID == user.UserID {
 			player.targets = append(player.targets[:i], player.targets[i+1:]...)
-			println("Removed: ", username)
-			player.targetUsers()
-			return
+			break
 		}
 	}
+	player.TargetUsers()
 }
 
-func (player *Player) targetUsers() {
+func (player *Player) TargetUsers() {
+	if len(player.targets) == 0 {
+		player.client.VoiceTarget = nil
+		return
+	}
+	println("Target usrs and chan")
 	player.client.VoiceTarget = &gumble.VoiceTarget{ID: uint32(2)}
-
-	player.client.VoiceTarget.AddChannel(player.client.Self.Channel, false, false, "radio")
 	ownChannel := player.client.Self.Channel
+	player.client.VoiceTarget.AddChannel(ownChannel, false, false, "radio")
 	packet := MumbleProto.VoiceTarget{
 		Id:      &player.client.VoiceTarget.ID,
 		Targets: make([]*MumbleProto.VoiceTarget_Target, 0, len(player.targets)+1),
@@ -114,8 +117,7 @@ func (player *Player) WaitForStop() {
 	player.stream.Wait()
 	switch player.DoNext {
 	case "stop":
-	//	client.Self.SetComment("Not Playing.")
-	// Do nothing
+		player.client.Self.SetComment("Not Playing.")
 	case "next":
 		if player.Playlist.HasNext() {
 			player.Playlist.Next()
@@ -138,8 +140,24 @@ func (player *Player) Play(path string) {
 	}
 	player.DoNext = "next"
 
-	helper.ChanMsg(player.client, "Now Playing: "+player.Playlist.GetCurrentHuman())
-	player.client.Self.SetComment("Now Playing: " + player.Playlist.GetCurrentHuman())
+	artPath := messages.FindCoverArtPath(player.Playlist.GetCurrentPath())
+	var artImg string
+	if artPath != "" {
+		artImg = messages.GenerateCoverArtImg(artPath)
+	}
+	//output := artImg
+	output := " <h2><u>Now Playing</u></h2><table><tr><td>" +
+		artImg + "</td><td>" +
+		"<table><tr><td>" +
+		player.Playlist.GetCurrentHuman() +
+		"</td></tr>" +
+		//"<tr><td>Another row :)</td></tr></table>" +
+		"</td></tr></table>"
+
+	// println("NoIMG Limit: ", len(output) > messages.MAX_MESSAGE_LENGTH_WITHOUT_IMAGE)
+	// println("IMG Limit: ", len(output) > messages.MAX_MESSAGE_LENGTH_WITH_IMAGE)
+	helper.ChanMsg(player.client, output)
+	player.client.Self.SetComment(output)
 	go player.WaitForStop()
 }
 

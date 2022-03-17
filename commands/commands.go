@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/iotku/mumzic/messages"
 	"strconv"
 	"strings"
 
@@ -16,12 +17,12 @@ func CommandDispatch(player *playback.Player, message string, isPrivate bool, se
 	command, arg := getCommandAndArg(message, isPrivate)
 
 	switch command {
-	case "play":
+	case "play", "add":
 		play(arg, sender, isPrivate, player)
 	case "stop":
 		player.DoNext = "stop"
 		player.Stop()
-	case "skip":
+	case "skip", "next":
 		value, err := strconv.Atoi(arg)
 		if err != nil {
 			player.Skip(1)
@@ -32,6 +33,8 @@ func CommandDispatch(player *playback.Player, message string, isPrivate bool, se
 		vol(player, sender, isPrivate, arg)
 	case "list":
 		list(player, sender, isPrivate)
+    case "retarget":
+        player.TargetUsers()
 	case "target":
 		player.AddTarget(sender)
 	case "untarget":
@@ -112,20 +115,20 @@ func list(player *playback.Player, sender string, isPrivate bool) {
 		amount = config.MaxLines
 	}
 
-	output := makeTable("Playlist", "#", "Track Name")
+	output := messages.MakeTable("Playlist", "#", "Track Name")
 	for i, line := range player.Playlist.GetList(amount) {
-		output.addRow(strconv.Itoa(i), line)
+		output.AddRow(strconv.Itoa(i), line)
 	}
-	output.addRow("---")
-	output.addRow(strconv.Itoa(player.Playlist.Size()-current), " Track(s) queued.")
+	output.AddRow("---")
+	output.AddRow(strconv.Itoa(player.Playlist.Size()-current), " Track(s) queued.")
 	helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
 }
 
 func find(player *playback.Player, sender string, isPrivate bool, arg string) {
 	results := search.SearchALL(arg)
-	output := makeTable("Search Results")
+	output := messages.MakeTable("Search Results")
 	for i, v := range results {
-		output.addRow(v)
+		output.AddRow(v)
 		if i == config.MaxLines { // TODO, Send extra results into 'more' buffer
 			break
 		}
@@ -145,14 +148,14 @@ func rand(player *playback.Player, sender string, isPrivate bool, arg string) {
 	plistOrigSize := player.Playlist.Size()
 	hadNext := player.Playlist.HasNext()
 
-	output := makeTable("Randomly Added")
+	output := messages.MakeTable("Randomly Added")
 	idList := search.GetRandomTrackIDs(value)
 	for _, v := range idList {
 		human := player.Playlist.QueueID(v)
 		if human != "" {
-			output.addRow("Added: <b>" + human + "</b>")
+			output.AddRow("Added: <b>" + human + "</b>")
 		} else {
-			output.addRow("Error: <b>" + "failed to add ID#" + strconv.Itoa(v) + "</b>")
+			output.AddRow("Error: <b>" + "failed to add ID#" + strconv.Itoa(v) + "</b>")
 		}
 	}
 	helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
