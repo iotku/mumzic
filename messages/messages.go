@@ -19,6 +19,7 @@ type MessageTable struct {
 	cols  int
 }
 
+// Default Message Limits for Murmur
 const (
 	MAX_MESSAGE_LENGTH_WITH_IMAGE    = 131072
 	MAX_MESSAGE_LENGTH_WITHOUT_IMAGE = 5000
@@ -74,10 +75,10 @@ func FindCoverArtPath(playPath string) string {
 // TODO: Find a way to get generated cover art to follow the larger limits (for messages that contain images)
 //       for now, we make sure the image is less than maxSize to be well below the 5000 text limit the mumble server
 //       imposes by default for text messages (that contain no image)
-func GenerateCoverArtImg(filepath string) string {
-	img, err := decodeImage(filepath)
+func GenerateCoverArtImg(path string) string {
+	img, err := decodeImage(path)
 	if err != nil {
-		log.Println("Failed to decode img: ", filepath, " ", err)
+		log.Println("Failed to decode img: ", path, " ", err)
 		return ""
 	}
 	resizedImg := resize.Resize(100, 100, img, resize.Lanczos3)
@@ -88,7 +89,7 @@ func GenerateCoverArtImg(filepath string) string {
 		buf.Reset()
 		options := jpeg.Options{Quality: jpegQuality}
 		if err := jpeg.Encode(&buf, resizedImg, &options); err != nil {
-			log.Println("Error encoding jpg for base64: ", filepath, " ", err)
+			log.Println("Error encoding jpg for base64: ", path, " ", err)
 			return ""
 		}
 		maxSize = len(buf.Bytes())
@@ -100,8 +101,12 @@ func GenerateCoverArtImg(filepath string) string {
 	return "<img src=\"data:img/jpeg;base64, " + encodedStr + "\" />"
 }
 
-func decodeImage(filepath string) (image.Image, error) {
-	f, err := os.Open(filepath)
+func decodeImage(path string) (image.Image, error) {
+	// File path is currently controlled by song database which is considered a trusted source of information
+	// This /should/ not change, but extra contingencies may be necessary if we start getting images from external sources
+	// which could potentially have troublesome arbitrary filenames
+	//#nosec G304
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
