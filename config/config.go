@@ -36,7 +36,7 @@ func init() {
 }
 
 func CloseDatabase() {
-    database.Close()
+    checkErr(database.Close())
 }
 
 func NewConfig(hostname string) *Config {
