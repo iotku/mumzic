@@ -19,7 +19,7 @@ type MessageTable struct {
 	cols  int
 }
 
-// Default Message Limits for Murmur
+// Default Message size limits for Murmur
 const (
 	MAX_MESSAGE_LENGTH_WITH_IMAGE    = 131072
 	MAX_MESSAGE_LENGTH_WITHOUT_IMAGE = 5000
@@ -98,6 +98,9 @@ func GenerateCoverArtImg(path string) string {
 
 	// Size Note: Grows ~1k bytes after encoding
 	encodedStr := base64.StdEncoding.EncodeToString(buf.Bytes())
+	if len(encodedStr) > MAX_MESSAGE_LENGTH_WITHOUT_IMAGE-100 {
+		return "" // Don't return album art, it's certainly too big!
+	}
 	return "<img src=\"data:img/jpeg;base64, " + encodedStr + "\" />"
 }
 

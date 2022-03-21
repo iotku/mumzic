@@ -57,7 +57,9 @@ func main() {
 				config.LastChannel = e.Channel.Name
 				fmt.Println("Last Channel Changed to", config.LastChannel)
 			}
-			channelPlayer.TargetUsers()
+            if channelPlayer != nil {
+                channelPlayer.TargetUsers()
+            }
 		},
 		Disconnect: func(e *gumble.DisconnectEvent) {
 			fmt.Println("Disconnecting: ", e.Type)
