@@ -3,10 +3,7 @@ package helper
 import (
 	"log"
 	"regexp"
-	"strings"
 	"time"
-
-	"github.com/iotku/mumzic/config"
 	"layeh.com/gumble/gumble"
 )
 
@@ -20,10 +17,6 @@ type msgBundle struct {
 var msgBurstCount uint
 var msgLastSentTime time.Time
 var msgChan chan (msgBundle)
-
-// Useful information
-var BotUsername string
-var ServerHostname string
 
 func init() {
 	msgBurstCount = 0
@@ -92,15 +85,6 @@ func MsgDispatch(client *gumble.Client, isPrivate bool, username string, msg str
 		UserMsg(client, username, msg)
 	} else {
 		ChanMsg(client, msg)
-	}
-}
-
-// LazyRemovePrefix gets the remaining text from a command invocation excluding the command prefix and command name (I.E. "!play 22" -> "22")
-func LazyRemovePrefix(message, prefix string) string {
-	if strings.HasPrefix(message, config.CmdPrefix) {
-		return strings.TrimSpace(message[len(config.CmdPrefix+prefix):])
-	} else {
-		return strings.TrimSpace(message[len(BotUsername+prefix)+1:])
 	}
 }
 

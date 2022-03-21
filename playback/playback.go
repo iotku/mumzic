@@ -22,6 +22,7 @@ type Player struct {
 	Playlist playlist.List
 	Volume   float32
 	DoNext   string
+	Config   *config.Config
 }
 
 func (player *Player) AddTarget(username string) {
@@ -81,7 +82,7 @@ func (player *Player) TargetUsers() {
 	}
 }
 
-func NewPlayer(client *gumble.Client) *Player {
+func NewPlayer(client *gumble.Client, config *config.Config) *Player {
 	return &Player{
 		stream:  nil,
 		client:  client,
@@ -90,8 +91,9 @@ func NewPlayer(client *gumble.Client) *Player {
 			Playlist: make([][]string, 0),
 			Position: 0,
 		},
-		Volume: config.VolumeLevel,
+		Volume: config.Volume,
 		DoNext: "stop", // stop, next
+		Config: config,
 	}
 }
 
@@ -215,7 +217,7 @@ func (player *Player) PlayYT(url string) {
 
 func (player *Player) SetVolume(value float32) {
 	player.Volume = value
-	config.VolumeLevel = value // TODO: Keep track of independent volume levels
+	player.Config.Volume = value
 	if player.stream != nil {
 		player.stream.Volume = value
 	}

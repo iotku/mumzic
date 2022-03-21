@@ -2,11 +2,18 @@ package config
 
 import (
 	"database/sql"
-	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"os"
 )
+
+type Config struct {
+    Volume float32  // Volume for bot
+    Prefix string   // Prefix for commands in channel chat 
+    Channel string  // Current ChannelName the bot is occupying 
+    Hostname string // Hostname of connected server
+    Username string // Username of bot
+}
 
 // Max amount of lines you wish commands to output (before hopefully, going into an unimplemented more buffer)
 var MaxLines = 10
@@ -14,59 +21,63 @@ var MaxLines = 10
 // Database generated from gendb
 var Songdb = "./media.db"
 
-// Playback Volume level
-var VolumeLevel float32 = 0.25
-var CmdPrefix = "!"
-var LastChannel string // last channel bot was in
+// Path to configuration db
 var configPath = "./config.db"
-var Hostname string // Set by LoadConfig for no good reason
+var database *sql.DB
 
-func checkErr(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-// SQLite fun
-func LoadConfig(hostname string) {
-	Hostname = hostname // hack to set Hostname
+func init() {
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		// Save new config.db
 		tx, _ := initConfigDB(configPath)
-		stmt := PrepareStatementInsert(tx)
-		defer stmt.Close()
-		writeConfigToDB(hostname, stmt)
-		err := tx.Commit()
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		db := openDB(configPath)
-		defer db.Close()
-		row := db.QueryRow("SELECT * FROM config where Hostname = ?", hostname)
-		err := row.Scan(&hostname, &VolumeLevel, &LastChannel, &CmdPrefix, &Songdb)
-		checkErr(err)
-	}
+		checkErr(tx.Commit())
+	} 
+
+    database = openDB(configPath)
+}
+
+func CloseDatabase() {
+    database.Close()
+}
+
+func NewConfig(hostname string) *Config {
+    defaultConfig := Config{
+        Volume: 0.3,
+        Prefix: "!",
+        Channel: "",
+        Hostname: hostname,
+    }
+
+    var config Config
+    row := database.QueryRow("SELECT * FROM config where Hostname = ?", hostname) 
+    err := row.Scan(&hostname, &config.Volume, &config.Channel, &config.Prefix, &Songdb)
+    if err != nil && err == sql.ErrNoRows { // create new configuration 
+        tx, _ := database.Begin()
+        writeConfigToDB(defaultConfig, prepareStatementInsert(tx))
+        checkErr(tx.Commit())
+        return &defaultConfig
+    } else if err != nil {
+        panic("NewConfig failed")
+    }
+
+    return &config
 }
 
 // SaveConfig writes the current configuraiton to the configuration sqlite database
-func SaveConfig() {
-	fmt.Println("Writing configuration to disk")
-	db := openDB(configPath)
-	tx, err := db.Begin()
+func (config *Config) Save() {
+    log.Println("Writing configuration to disk")
+	tx, err := database.Begin()
 	if err != nil {
 		log.Fatal(err)
 	}
-	stmt := PrepareUpdate(tx)
+	stmt := prepareUpdate(tx)
 	defer stmt.Close()
 	// There must be a better way to do this, but I'm tired and this will do for now.
-	_, err = stmt.Exec(VolumeLevel, LastChannel, CmdPrefix, Hostname)
+	_, err = stmt.Exec(config.Volume, config.Channel, config.Prefix, config.Hostname)
 	checkErr(err)
-	err = tx.Commit()
-	checkErr(err)
+	checkErr(tx.Commit())
 }
 
-func PrepareUpdate(tx *sql.Tx) *sql.Stmt {
+func prepareUpdate(tx *sql.Tx) *sql.Stmt {
 	stmt, err := tx.Prepare(`UPDATE config SET VolumeLevel = ?, LastChannel = ?, CmdPrefix = ? WHERE Hostname = ?;`)
 	if err != nil {
 		log.Fatal(err)
@@ -74,7 +85,7 @@ func PrepareUpdate(tx *sql.Tx) *sql.Stmt {
 	return stmt
 }
 
-func PrepareStatementInsert(tx *sql.Tx) *sql.Stmt {
+func prepareStatementInsert(tx *sql.Tx) *sql.Stmt {
 	stmt, err := tx.Prepare(`INSERT INTO "config" (Hostname, VolumeLevel, LastChannel, CmdPrefix, SongDB) VALUES (?, ?, ?, ?, ?);`)
 	if err != nil {
 		log.Fatal(err)
@@ -82,8 +93,8 @@ func PrepareStatementInsert(tx *sql.Tx) *sql.Stmt {
 	return stmt
 }
 
-func writeConfigToDB(hostname string, stmt *sql.Stmt) {
-	_, err := stmt.Exec(hostname, VolumeLevel, LastChannel, CmdPrefix, Songdb)
+func writeConfigToDB(config Config, stmt *sql.Stmt) {
+	_, err := stmt.Exec(config.Hostname, config.Volume, config.Channel, config.Prefix, Songdb)
 	if err != nil {
 		log.Fatalln("Writing Config Failed!:", err.Error())
 	}
@@ -135,4 +146,10 @@ func initConfigDB(dbfile string) (*sql.Tx, *sql.DB) {
 	}
 
 	return tx, db
+}
+
+func checkErr(err error) {
+	if err != nil {
+		panic(err)
+	}
 }

@@ -14,7 +14,7 @@ import (
 
 func CommandDispatch(player *playback.Player, message string, isPrivate bool, sender string) {
 	helper.DebugPrintln("IsPlaying:", player.IsPlaying(), "DoNext:", player.DoNext)
-	command, arg := getCommandAndArg(message, isPrivate)
+	command, arg := getCommandAndArg(message, isPrivate, player.Config, player.GetClient().Self.Name)
 
 	switch command {
 	case "play", "add":
@@ -46,7 +46,7 @@ func CommandDispatch(player *playback.Player, message string, isPrivate bool, se
 	case "search", "find":
 		find(player, sender, isPrivate, arg)
 	case "saveconf":
-		config.SaveConfig()
+		player.Config.Save()
 	}
 }
 
@@ -61,11 +61,11 @@ func AddSongToQueue(id string, sender string, isPrivate bool, player *playback.P
 	return true
 }
 
-func getCommandAndArg(message string, isPrivate bool) (command string, arg string) {
+func getCommandAndArg(message string, isPrivate bool, config *config.Config, username string) (command string, arg string) {
 	var offset int
-	if !isPrivate && strings.HasPrefix(message, config.CmdPrefix) {
-		message = message[len(config.CmdPrefix):]
-	} else if strings.HasPrefix(message, helper.BotUsername) {
+    if !isPrivate && strings.HasPrefix(message, config.Prefix) {
+		message = message[len(config.Prefix):]
+	} else if strings.HasPrefix(message, username) {
 		offset = 1
 	}
 	split := strings.Split(message, " ")
