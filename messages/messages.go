@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"github.com/nfnt/resize"
 	"image"
 	"image/jpeg"
 	_ "image/png"
@@ -12,11 +11,67 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/iotku/mumzic/config"
+	"github.com/nfnt/resize"
 )
 
+var messageBuffers map[string][]string
+var messageOffsets map[string]int
+
+func init() {
+    messageBuffers = make(map[string][]string)
+    messageOffsets = make(map[string]int)
+}
 type MessageTable struct {
 	table *strings.Builder
 	cols  int
+}
+
+func ResetMore(sender string) {
+    messageBuffers[sender] = nil
+    messageOffsets[sender] = 0
+}
+
+func SendMore(sender, text string,) {
+    messageBuffers[sender] = append(messageBuffers[sender], text)
+}
+
+func GetMore(sender string, isPrivate bool) (output []string) {
+    offset := messageOffsets[sender]
+    if offset == len(messageBuffers[sender]) {
+        return []string{"nothing more"}
+    }
+    var i int
+    for i = offset; i < offset+config.MaxLines && i < len(messageBuffers[sender]); i++ {
+        output = append(output, messageBuffers[sender][i])
+    }
+    if i <= len(messageBuffers[sender]) {
+        messageOffsets[sender] = i
+    }
+    return 
+}
+
+func GetLess (sender string, isPrivate bool) (output []string){
+    offset := messageOffsets[sender] - config.MaxLines
+    if offset+config.MaxLines <= 0 {
+        return []string{"Nothing less"}
+    }
+
+    if offset - config.MaxLines < 0 {
+        offset = 0
+    }
+
+    var i int
+    for i = offset; i < offset+config.MaxLines && i < len(messageBuffers[sender]); i++ {
+        output = append(output, messageBuffers[sender][i])
+    }
+    if offset <= config.MaxLines {
+        messageOffsets[sender] = 0
+    } else {
+        messageOffsets[sender] -= config.MaxLines
+    }
+    return 
 }
 
 // Default Message size limits for Murmur

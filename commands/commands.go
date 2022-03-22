@@ -47,6 +47,20 @@ func CommandDispatch(player *playback.Player, message string, isPrivate bool, se
 		find(player, sender, isPrivate, arg)
 	case "saveconf":
 		player.Config.Save()
+    case "more":
+        more := messages.GetMore(sender, isPrivate)
+        table := messages.MakeTable("More", "Results")
+        for _, v := range(more) {
+            table.AddRow(v)
+        }
+        helper.MsgDispatch(player.GetClient(), isPrivate, sender, table.String())
+    case "less":
+        less := messages.GetLess(sender, isPrivate)
+        table := messages.MakeTable("less", "results")
+        for _, v := range (less) {
+            table.AddRow(v)
+        }
+        helper.MsgDispatch(player.GetClient(), isPrivate, sender, table.String())
 	}
 }
 
@@ -110,14 +124,17 @@ func list(player *playback.Player, sender string, isPrivate bool) {
 	current := player.Playlist.Position
 	amount := player.Playlist.Size() - current
 
-	// TODO: Send to more buffer
-	if amount > config.MaxLines {
-		amount = config.MaxLines
-	}
-
-	output := messages.MakeTable("Playlist", "#", "Track Name")
-	for i, line := range player.Playlist.GetList(amount) {
-		output.AddRow(strconv.Itoa(i), line)
+	output := messages.MakeTable("Playlist", "# Track Name")
+    playlist := player.Playlist.GetList(amount)
+    if len(playlist) > config.MaxLines {
+        messages.ResetMore(sender)
+    }
+	for i, line := range playlist {
+        if i > config.MaxLines {
+            messages.SendMore(sender, strconv.Itoa(i)+line)
+        } else {
+            output.AddRow(strconv.Itoa(i) + line)
+        }
 	}
 	output.AddRow("---")
 	output.AddRow(strconv.Itoa(player.Playlist.Size()-current), " Track(s) queued.")

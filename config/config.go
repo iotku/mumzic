@@ -27,7 +27,6 @@ var database *sql.DB
 
 func init() {
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		// Save new config.db
 		tx, _ := initConfigDB(configPath)
 		checkErr(tx.Commit())
 	} 
