@@ -1,16 +1,16 @@
 package playback
 
 import (
-	"github.com/iotku/mumzic/messages"
-	"layeh.com/gumble/gumble/MumbleProto"
 	"log"
 	"strings"
 
 	"github.com/iotku/mumzic/config"
 	"github.com/iotku/mumzic/helper"
+	"github.com/iotku/mumzic/messages"
 	"github.com/iotku/mumzic/playlist"
 	"github.com/iotku/mumzic/youtubedl"
 	"layeh.com/gumble/gumble"
+	"layeh.com/gumble/gumble/MumbleProto"
 	"layeh.com/gumble/gumbleffmpeg"
 	_ "layeh.com/gumble/opus"
 )

@@ -40,30 +40,30 @@ func getMaxID(database string) int {
 }
 
 func GetRandomTrackIDs(amount int) (idList []int) {
-    if getMaxID(config.Songdb) == 0 {
-        return 
-    }
+	if getMaxID(config.Songdb) == 0 {
+		return
+	}
 
-    db, err := sql.Open("sqlite3", config.Songdb)
-    defer db.Close()
-    checkErrPanic(err)
-    var rows *sql.Rows
-    rows, err = db.Query("SELECT ROWID from music ORDER BY random() LIMIT ?", amount)
-    checkErrPanic(err) 
-    for rows.Next() {
-        var id int
-        if err = rows.Scan(&id); err != nil {
-            log.Fatalln("GetRandomTrackIDs failed to scan rows.")
-        }
-        idList = append(idList, id)
-    }
-    return
+	db, err := sql.Open("sqlite3", config.Songdb)
+	defer db.Close()
+	checkErrPanic(err)
+	var rows *sql.Rows
+	rows, err = db.Query("SELECT ROWID from music ORDER BY random() LIMIT ?", amount)
+	checkErrPanic(err)
+	for rows.Next() {
+		var id int
+		if err = rows.Scan(&id); err != nil {
+			log.Fatalln("GetRandomTrackIDs failed to scan rows.")
+		}
+		idList = append(idList, id)
+	}
+	return
 }
 
 // Query SQLite database to get filepath related to ID
 func GetTrackById(trackID int) (filepath, humanout string) {
 	// Update MaxDBID when searching via ID to accommodate possibility of database changing size while mumzic is running
-	MaxDBID = getMaxID(config.Songdb) 
+	MaxDBID = getMaxID(config.Songdb)
 	if trackID > MaxDBID {
 		return "", ""
 	}

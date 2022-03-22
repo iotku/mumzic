@@ -2,11 +2,12 @@ package playlist
 
 import (
 	"errors"
+	"strconv"
+	"strings"
+
 	"github.com/iotku/mumzic/helper"
 	"github.com/iotku/mumzic/search"
 	"github.com/iotku/mumzic/youtubedl"
-	"strconv"
-	"strings"
 )
 
 // List contains a 2D slice of "Human Friendly" titles and raw paths as well as its position along the playlist
@@ -133,5 +134,5 @@ func (list *List) queueYT(url, human string) string {
 }
 
 func (list *List) Count() int {
-    return list.Size() - list.Position
+	return list.Size() - list.Position
 }

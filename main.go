@@ -3,13 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/iotku/mumzic/playback"
 	"log"
 	"os"
 	"strings"
 
 	"github.com/iotku/mumzic/commands"
 	"github.com/iotku/mumzic/config"
+	"github.com/iotku/mumzic/playback"
 	"github.com/iotku/mumzic/search"
 	_ "github.com/mattn/go-sqlite3"
 	"layeh.com/gumble/gumble"
@@ -23,15 +23,15 @@ func main() {
 	}
 
 	var channelPlayer *playback.Player
-    var bConfig *config.Config
-    // Start main gumble loop
+	var bConfig *config.Config
+	// Start main gumble loop
 	gumbleutil.Main(gumbleutil.AutoBitrate, gumbleutil.Listener{
 		Connect: func(e *gumble.ConnectEvent) {
-            if hostName := flag.Lookup("server").Value; hostName == nil {
-                bConfig = config.NewConfig("unknown")
-            } else {
-                bConfig = config.NewConfig(hostName.String())
-            }
+			if hostName := flag.Lookup("server").Value; hostName == nil {
+				bConfig = config.NewConfig("unknown")
+			} else {
+				bConfig = config.NewConfig(hostName.String())
+			}
 
 			if bConfig.Channel != "" && e.Client.Channels.Find(bConfig.Channel) != nil {
 				fmt.Println("Joining ", bConfig.Channel)
@@ -61,14 +61,14 @@ func main() {
 				bConfig.Channel = e.Channel.Name
 				fmt.Println("Last Channel Changed to", bConfig.Channel)
 			}
-            if channelPlayer != nil {
-                channelPlayer.TargetUsers()
-            }
+			if channelPlayer != nil {
+				channelPlayer.TargetUsers()
+			}
 		},
 		Disconnect: func(e *gumble.DisconnectEvent) {
 			fmt.Println("Disconnecting: ", e.Type)
 			bConfig.Save()
-            config.CloseDatabase()
+			config.CloseDatabase()
 		},
 	})
 }

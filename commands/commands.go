@@ -5,10 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/iotku/mumzic/messages"
-
 	"github.com/iotku/mumzic/config"
 	"github.com/iotku/mumzic/helper"
+	"github.com/iotku/mumzic/messages"
 	"github.com/iotku/mumzic/playback"
 	"github.com/iotku/mumzic/search"
 )
@@ -34,24 +33,29 @@ func CommandDispatch(player *playback.Player, message string, isPrivate bool, se
 		vol(player, sender, isPrivate, arg)
 	case "list":
 		list(player, sender, isPrivate)
-    case "retarget":
-        player.TargetUsers()
+	case "retarget":
+		player.TargetUsers()
 	case "target":
 		player.AddTarget(sender)
 	case "untarget":
 		player.RemoveTarget(sender)
 	case "help":
-		helper.MsgDispatch(player.GetClient(), isPrivate, sender, "https://github.com/iotku/mumzic/blob/master/USAGE.md")
+		helper.MsgDispatch(
+			player.GetClient(),
+			isPrivate,
+			sender,
+			"https://github.com/iotku/mumzic/blob/master/USAGE.md",
+		)
 	case "rand":
 		rand(player, sender, isPrivate, arg)
 	case "search", "find":
 		find(player, sender, isPrivate, arg)
 	case "saveconf":
 		player.Config.Save()
-    case "more":
-        helper.MsgDispatch(player.GetClient(), isPrivate, sender, messages.GetMoreTable(sender))
-    case "less":
-        helper.MsgDispatch(player.GetClient(), isPrivate, sender, messages.GetLessTable(sender))
+	case "more":
+		helper.MsgDispatch(player.GetClient(), isPrivate, sender, messages.GetMoreTable(sender))
+	case "less":
+		helper.MsgDispatch(player.GetClient(), isPrivate, sender, messages.GetLessTable(sender))
 	}
 }
 
@@ -66,9 +70,14 @@ func AddSongToQueue(id string, sender string, isPrivate bool, player *playback.P
 	return true
 }
 
-func getCommandAndArg(message string, isPrivate bool, config *config.Config, username string) (command string, arg string) {
+func getCommandAndArg(
+	message string,
+	isPrivate bool,
+	config *config.Config,
+	username string,
+) (command string, arg string) {
 	var offset int
-    if !isPrivate && strings.HasPrefix(message, config.Prefix) {
+	if !isPrivate && strings.HasPrefix(message, config.Prefix) {
 		message = message[len(config.Prefix):]
 	} else if strings.HasPrefix(message, username) {
 		offset = 1
@@ -113,25 +122,26 @@ func vol(player *playback.Player, sender string, isPrivate bool, arg string) {
 
 func list(player *playback.Player, sender string, isPrivate bool) {
 	output := messages.MakeTable("Playlist", "# Track Name")
-    playlist := player.Playlist.GetList(player.Playlist.Count())
-    extraCount := messages.SaveMoreRows(sender, playlist, output)
-    output.AddRow("---")
+	playlist := player.Playlist.GetList(player.Playlist.Count())
+	extraCount := messages.SaveMoreRows(sender, playlist, output)
+	output.AddRow("---")
 	output.AddRow(strconv.Itoa(player.Playlist.Count()) + " Track(s) queued.")
-    if extraCount > 0 {
-        output.AddRow("There are " + strconv.Itoa(extraCount) + " extra entries, use <b>more</b> and <b>less</b> to see them.")
-    }
+	if extraCount > 0 {
+		output.AddRow("There are " + strconv.Itoa(extraCount) + " extra entries.")
+		output.AddRow("Use <b>more</b> and <b>less</b> to see them.")
+	}
 	helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
 }
 
 func find(player *playback.Player, sender string, isPrivate bool, arg string) {
 	results := search.SearchALL(arg)
 	output := messages.MakeTable("Search Results")
-    extraCount := messages.SaveMoreRows(sender, results, output)
-    if extraCount > 0 {
-        output.AddRow("---")
-        output.AddRow("There are " + strconv.Itoa(extraCount) + " additional results.")
-        output.AddRow("Use <b>more</b> and <b>less</b> to see them.")
-    }
+	extraCount := messages.SaveMoreRows(sender, results, output)
+	if extraCount > 0 {
+		output.AddRow("---")
+		output.AddRow("There are " + strconv.Itoa(extraCount) + " additional results.")
+		output.AddRow("Use <b>more</b> and <b>less</b> to see them.")
+	}
 	helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
 }
 

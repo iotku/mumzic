@@ -2,17 +2,18 @@ package config
 
 import (
 	"database/sql"
-	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"os"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Config struct {
-    Volume float32  // Volume for bot
-    Prefix string   // Prefix for commands in channel chat 
-    Channel string  // Current ChannelName the bot is occupying 
-    Hostname string // Hostname of connected server
-    Username string // Username of bot
+	Volume   float32 // Volume for bot
+	Prefix   string  // Prefix for commands in channel chat
+	Channel  string  // Current ChannelName the bot is occupying
+	Hostname string  // Hostname of connected server
+	Username string  // Username of bot
 }
 
 // Max amount of lines you wish commands to output (before hopefully, going into an unimplemented more buffer)
@@ -29,41 +30,41 @@ func init() {
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		tx, _ := initConfigDB(configPath)
 		checkErr(tx.Commit())
-	} 
+	}
 
-    database = openDB(configPath)
+	database = openDB(configPath)
 }
 
 func CloseDatabase() {
-    checkErr(database.Close())
+	checkErr(database.Close())
 }
 
 func NewConfig(hostname string) *Config {
-    defaultConfig := Config{
-        Volume: 0.3,
-        Prefix: "!",
-        Channel: "",
-        Hostname: hostname,
-    }
+	defaultConfig := Config{
+		Volume:   0.3,
+		Prefix:   "!",
+		Channel:  "",
+		Hostname: hostname,
+	}
 
-    var config Config
-    row := database.QueryRow("SELECT * FROM config where Hostname = ?", hostname) 
-    err := row.Scan(&hostname, &config.Volume, &config.Channel, &config.Prefix, &Songdb)
-    if err != nil && err == sql.ErrNoRows { // create new configuration 
-        tx, _ := database.Begin()
-        writeConfigToDB(defaultConfig, prepareStatementInsert(tx))
-        checkErr(tx.Commit())
-        return &defaultConfig
-    } else if err != nil {
-        panic("NewConfig failed")
-    }
+	var config Config
+	row := database.QueryRow("SELECT * FROM config where Hostname = ?", hostname)
+	err := row.Scan(&hostname, &config.Volume, &config.Channel, &config.Prefix, &Songdb)
+	if err != nil && err == sql.ErrNoRows { // create new configuration
+		tx, _ := database.Begin()
+		writeConfigToDB(defaultConfig, prepareStatementInsert(tx))
+		checkErr(tx.Commit())
+		return &defaultConfig
+	} else if err != nil {
+		panic("NewConfig failed")
+	}
 
-    return &config
+	return &config
 }
 
 // SaveConfig writes the current configuraiton to the configuration sqlite database
 func (config *Config) Save() { // TODO: verify this is actually working
-    log.Println("Writing configuration to disk")
+	log.Println("Writing configuration to disk")
 	tx, err := database.Begin()
 	if err != nil {
 		log.Fatal(err)

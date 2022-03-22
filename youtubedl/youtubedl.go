@@ -2,10 +2,11 @@ package youtubedl
 
 import (
 	"bytes"
-	"layeh.com/gumble/gumbleffmpeg"
 	"log"
 	"os/exec"
 	"strings"
+
+	"layeh.com/gumble/gumbleffmpeg"
 )
 
 func IsWhiteListedURL(url string) bool {
