@@ -112,13 +112,11 @@ func vol(player *playback.Player, sender string, isPrivate bool, arg string) {
 }
 
 func list(player *playback.Player, sender string, isPrivate bool) {
-	current := player.Playlist.Position
-	amount := player.Playlist.Size() - current
 	output := messages.MakeTable("Playlist", "# Track Name")
-    playlist := player.Playlist.GetList(amount)
+    playlist := player.Playlist.GetList(player.Playlist.Count())
     extraCount := messages.SaveMoreRows(sender, playlist, output)
     output.AddRow("---")
-	output.AddRow(strconv.Itoa(player.Playlist.Size()-current) + " Track(s) queued.")
+	output.AddRow(strconv.Itoa(player.Playlist.Count()) + " Track(s) queued.")
     if extraCount > 0 {
         output.AddRow("There are " + strconv.Itoa(extraCount) + " extra entries, use <b>more</b> and <b>less</b> to see them.")
     }
@@ -128,12 +126,12 @@ func list(player *playback.Player, sender string, isPrivate bool) {
 func find(player *playback.Player, sender string, isPrivate bool, arg string) {
 	results := search.SearchALL(arg)
 	output := messages.MakeTable("Search Results")
-	for i, v := range results {
-		output.AddRow(v)
-		if i == config.MaxLines { // TODO, Send extra results into 'more' buffer
-			break
-		}
-	}
+    extraCount := messages.SaveMoreRows(sender, results, output)
+    if extraCount > 0 {
+        output.AddRow("---")
+        output.AddRow("There are " + strconv.Itoa(extraCount) + " additional results.")
+        output.AddRow("Use <b>more</b> and <b>less</b> to see them.")
+    }
 	helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
 }
 

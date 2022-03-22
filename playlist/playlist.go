@@ -131,3 +131,7 @@ func (list *List) queueYT(url, human string) string {
 	list.pAdd(url, human)
 	return human
 }
+
+func (list *List) Count() int {
+    return list.Size() - list.Position
+}

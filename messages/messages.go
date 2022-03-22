@@ -38,7 +38,6 @@ func SendMore(sender, text string) {
     messageBuffers[sender] = append(messageBuffers[sender], text)
 }
 
-
 // SaveMoreRows adds the first rows limited by config.MaxLines to the provided
 // table and then saves the additional rows into the more buffer
 func SaveMoreRows(sender string, rows []string, table MessageTable) int {
