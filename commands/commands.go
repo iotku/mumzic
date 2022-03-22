@@ -2,9 +2,10 @@ package commands
 
 import (
 	"fmt"
-	"github.com/iotku/mumzic/messages"
 	"strconv"
 	"strings"
+
+	"github.com/iotku/mumzic/messages"
 
 	"github.com/iotku/mumzic/config"
 	"github.com/iotku/mumzic/helper"
@@ -48,19 +49,9 @@ func CommandDispatch(player *playback.Player, message string, isPrivate bool, se
 	case "saveconf":
 		player.Config.Save()
     case "more":
-        more := messages.GetMore(sender, isPrivate)
-        table := messages.MakeTable("More", "Results")
-        for _, v := range(more) {
-            table.AddRow(v)
-        }
-        helper.MsgDispatch(player.GetClient(), isPrivate, sender, table.String())
+        helper.MsgDispatch(player.GetClient(), isPrivate, sender, messages.GetMoreTable(sender))
     case "less":
-        less := messages.GetLess(sender, isPrivate)
-        table := messages.MakeTable("less", "results")
-        for _, v := range (less) {
-            table.AddRow(v)
-        }
-        helper.MsgDispatch(player.GetClient(), isPrivate, sender, table.String())
+        helper.MsgDispatch(player.GetClient(), isPrivate, sender, messages.GetLessTable(sender))
 	}
 }
 
@@ -123,21 +114,14 @@ func vol(player *playback.Player, sender string, isPrivate bool, arg string) {
 func list(player *playback.Player, sender string, isPrivate bool) {
 	current := player.Playlist.Position
 	amount := player.Playlist.Size() - current
-
 	output := messages.MakeTable("Playlist", "# Track Name")
     playlist := player.Playlist.GetList(amount)
-    if len(playlist) > config.MaxLines {
-        messages.ResetMore(sender)
+    extraCount := messages.SaveMoreRows(sender, playlist, output)
+    output.AddRow("---")
+	output.AddRow(strconv.Itoa(player.Playlist.Size()-current) + " Track(s) queued.")
+    if extraCount > 0 {
+        output.AddRow("There are " + strconv.Itoa(extraCount) + " extra entries, use <b>more</b> and <b>less</b> to see them.")
     }
-	for i, line := range playlist {
-        if i > config.MaxLines {
-            messages.SendMore(sender, strconv.Itoa(i)+line)
-        } else {
-            output.AddRow(strconv.Itoa(i) + line)
-        }
-	}
-	output.AddRow("---")
-	output.AddRow(strconv.Itoa(player.Playlist.Size()-current), " Track(s) queued.")
 	helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
 }
 

@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/iotku/mumzic/config"
@@ -33,11 +34,34 @@ func ResetMore(sender string) {
     messageOffsets[sender] = 0
 }
 
-func SendMore(sender, text string,) {
+func SendMore(sender, text string) {
     messageBuffers[sender] = append(messageBuffers[sender], text)
 }
 
-func GetMore(sender string, isPrivate bool) (output []string) {
+
+// SaveMoreRows adds the first rows limited by config.MaxLines to the provided
+// table and then saves the additional rows into the more buffer
+func SaveMoreRows(sender string, rows []string, table MessageTable) int {
+    ResetMore(sender)
+    var i int
+    for i = 0; i < config.MaxLines && i < len(rows); i++ {
+        table.AddRow(strconv.Itoa(i) + ": " + rows[i])
+        SendMore(sender, strconv.Itoa(i) + ": " + rows[i])
+    }
+
+    var extra int
+    for ; i < len(rows); i++ {
+        SendMore(sender, strconv.Itoa(i) + ": " + rows[i])
+        extra++
+    }
+    if extra != 0 {
+        messageOffsets[sender] = config.MaxLines
+    }
+
+    return extra
+}
+
+func GetMore(sender string) (output []string) {
     offset := messageOffsets[sender]
     if offset == len(messageBuffers[sender]) {
         return []string{"nothing more"}
@@ -52,7 +76,23 @@ func GetMore(sender string, isPrivate bool) (output []string) {
     return 
 }
 
-func GetLess (sender string, isPrivate bool) (output []string){
+func GetMoreTable(sender string) string {
+    table := MakeTable("More Results")
+    for _, v := range(GetMore(sender)) {
+        table.AddRow(v)
+    }
+    return table.String()
+}
+
+func GetLessTable(sender string) string {
+    table := MakeTable("Less Results")
+    for _,v := range(GetLess(sender)) {
+        table.AddRow(v)
+    }
+    return table.String()
+}
+
+func GetLess(sender string) (output []string){ // TODO: Investigate offsets not always being correct
     offset := messageOffsets[sender] - config.MaxLines
     if offset+config.MaxLines <= 0 {
         return []string{"Nothing less"}

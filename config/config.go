@@ -62,7 +62,7 @@ func NewConfig(hostname string) *Config {
 }
 
 // SaveConfig writes the current configuraiton to the configuration sqlite database
-func (config *Config) Save() {
+func (config *Config) Save() { // TODO: verify this is actually working
     log.Println("Writing configuration to disk")
 	tx, err := database.Begin()
 	if err != nil {
