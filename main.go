@@ -57,7 +57,7 @@ func main() {
 			}
 		},
 		ChannelChange: func(e *gumble.ChannelChangeEvent) {
-			if e.Channel.Name != "Root" {
+			if bConfig != nil && e.Channel.Name != "Root" {
 				bConfig.Channel = e.Channel.Name
 				fmt.Println("Last Channel Changed to", bConfig.Channel)
 			}
