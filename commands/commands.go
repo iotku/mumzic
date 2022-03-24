@@ -59,7 +59,7 @@ func CommandDispatch(player *playback.Player, message string, isPrivate bool, se
 	}
 }
 
-func AddSongToQueue(id string, sender string, isPrivate bool, player *playback.Player) bool {
+func addSongToQueue(id string, sender string, isPrivate bool, player *playback.Player) bool {
 	queued, err := player.Playlist.AddToQueue(id)
 	if err != nil {
 		helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Error: "+err.Error())
@@ -93,14 +93,14 @@ func getCommandAndArg(
 
 func play(id string, sender string, isPrivate bool, player *playback.Player) {
 	if id != "" && player.IsStopped() { // Has argument
-		if player.Playlist.IsEmpty() && AddSongToQueue(id, sender, isPrivate, player) {
+		if player.Playlist.IsEmpty() && addSongToQueue(id, sender, isPrivate, player) {
 			player.PlayCurrent()
-		} else if !player.Playlist.HasNext() && AddSongToQueue(id, sender, isPrivate, player) {
+		} else if !player.Playlist.HasNext() && addSongToQueue(id, sender, isPrivate, player) {
 			player.Skip(1)
-		} else if player.Playlist.HasNext() && AddSongToQueue(id, sender, isPrivate, player) {
+		} else if player.Playlist.HasNext() && addSongToQueue(id, sender, isPrivate, player) {
 			player.PlayCurrent()
 		}
-	} else if id != "" && !player.IsStopped() && AddSongToQueue(id, sender, isPrivate, player) {
+	} else if id != "" && !player.IsStopped() && addSongToQueue(id, sender, isPrivate, player) {
 	} // Just add to queue if playing
 
 	if !player.Playlist.IsEmpty() && player.IsStopped() { // Recover from stopped player.
@@ -109,15 +109,15 @@ func play(id string, sender string, isPrivate bool, player *playback.Player) {
 }
 
 func vol(player *playback.Player, sender string, isPrivate bool, arg string) {
-	// TODO: At some point consider switching to percentage based system
 	if arg != "" {
-		value, err := strconv.ParseFloat("."+arg, 32)
-		if err == nil {
-			player.SetVolume(float32(value))
+		argInt, err := strconv.Atoi(arg)
+		if err != nil || argInt <= 0 || argInt > 100 {
+			helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Invalid Volume: Valid range <b>[1-100]</b>")
+			return
 		}
-	} else {
-		helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Current Volume: "+fmt.Sprintf("%f", player.Volume))
+		player.SetVolume(0.01 * float32(argInt))
 	}
+	helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Current Volume: "+fmt.Sprintf("%f", player.Volume))
 }
 
 func list(player *playback.Player, sender string, isPrivate bool) {
