@@ -32,7 +32,6 @@ func main() {
 			} else {
 				bConfig = config.NewConfig(hostName.String())
 			}
-
 			if bConfig.Channel != "" && e.Client.Channels.Find(bConfig.Channel) != nil {
 				fmt.Println("Joining ", bConfig.Channel)
 				e.Client.Self.Move(e.Client.Channels.Find(bConfig.Channel))
@@ -41,6 +40,7 @@ func main() {
 			}
 
 			channelPlayer = playback.NewPlayer(e.Client, bConfig)
+			channelPlayer.Playlist.Load(bConfig.Hostname)
 			fmt.Printf("audio player loaded! (%d files)\n", search.MaxDBID)
 		},
 		TextMessage: func(e *gumble.TextMessageEvent) {
@@ -68,6 +68,7 @@ func main() {
 		Disconnect: func(e *gumble.DisconnectEvent) {
 			fmt.Println("Disconnecting: ", e.Type)
 			bConfig.Save()
+			channelPlayer.Playlist.Save(bConfig.Hostname)
 			config.CloseDatabase()
 		},
 	})

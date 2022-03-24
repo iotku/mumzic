@@ -49,7 +49,7 @@ func NewConfig(hostname string) *Config {
 
 	var config Config
 	row := database.QueryRow("SELECT * FROM config where Hostname = ?", hostname)
-	err := row.Scan(&hostname, &config.Volume, &config.Channel, &config.Prefix, &Songdb)
+	err := row.Scan(&config.Hostname, &config.Volume, &config.Channel, &config.Prefix, &Songdb)
 	if err != nil && err == sql.ErrNoRows { // create new configuration
 		tx, _ := database.Begin()
 		writeConfigToDB(defaultConfig, prepareStatementInsert(tx))

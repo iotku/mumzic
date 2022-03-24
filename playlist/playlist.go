@@ -1,7 +1,10 @@
 package playlist
 
 import (
+	"encoding/json"
 	"errors"
+	"log"
+	"os"
 	"strconv"
 	"strings"
 
@@ -10,10 +13,58 @@ import (
 	"github.com/iotku/mumzic/youtubedl"
 )
 
+const PLAYLIST_DIR = "playlists/" // Directory for saving/loading playlists
+
 // List contains a 2D slice of "Human Friendly" titles and raw paths as well as its position along the playlist
 type List struct {
 	Playlist [][]string
 	Position int
+}
+
+func (list *List) Save(hostname string) {
+	log.Println("Saving Playlist for", hostname)
+	var saveList [][]string
+	for i := list.Position; i < len(list.Playlist); i++ {
+		saveList = append(saveList, list.Playlist[i])
+	}
+
+	if saveList == nil {
+		return
+	}
+
+	jsonout, err := json.Marshal(saveList)
+	if err != nil {
+		log.Fatalln("failed to marshal playlist json")
+	}
+
+	if _, err := os.Stat(PLAYLIST_DIR); os.IsNotExist(err) {
+		if err = os.Mkdir(PLAYLIST_DIR, 0755); err != nil {
+			log.Fatalln("failed to create"+PLAYLIST_DIR+"directory:", err)
+		}
+	}
+	if fileInfo, _ := os.Stat(PLAYLIST_DIR); !fileInfo.IsDir() {
+		log.Fatalln("Playlist path, ", PLAYLIST_DIR, "is not a directory.")
+	}
+
+	if err := os.WriteFile(PLAYLIST_DIR+hostname, jsonout, 0644); err != nil {
+		log.Fatalln("Failed to write playlist file:", err.Error())
+	}
+}
+
+func (list *List) Load(hostname string) {
+	if _, err := os.Open(PLAYLIST_DIR + hostname); err == nil {
+		file, err := os.ReadFile(PLAYLIST_DIR + hostname)
+		if err != nil {
+			log.Fatalln(err.Error())
+		}
+		var pList [][]string
+		err = json.Unmarshal(file, &pList)
+		if err != nil {
+			log.Fatalln("json Unmarshal failed", err.Error())
+		}
+		log.Println("Applying plist")
+		list.Playlist = pList
+	}
 }
 
 // GetCurrentPath gets the raw path for the current item in the playlist

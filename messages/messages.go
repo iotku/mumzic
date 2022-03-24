@@ -17,17 +17,23 @@ import (
 	"github.com/nfnt/resize"
 )
 
+// Default Message size limits for Murmur
+const (
+	MAX_MESSAGE_LENGTH_WITH_IMAGE    = 131072
+	MAX_MESSAGE_LENGTH_WITHOUT_IMAGE = 5000
+)
+
+type MessageTable struct {
+	table *strings.Builder
+	cols  int
+}
+
 var messageBuffers map[string][]string
 var messageOffsets map[string]int
 
 func init() {
 	messageBuffers = make(map[string][]string)
 	messageOffsets = make(map[string]int)
-}
-
-type MessageTable struct {
-	table *strings.Builder
-	cols  int
 }
 
 func ResetMore(sender string) {
@@ -84,14 +90,6 @@ func GetMoreTable(sender string) string {
 	return table.String()
 }
 
-func GetLessTable(sender string) string {
-	table := MakeTable("Less Results")
-	for _, v := range GetLess(sender) {
-		table.AddRow(v)
-	}
-	return table.String()
-}
-
 func GetLess(sender string) (output []string) { // TODO: Investigate offsets not always being correct
 	offset := messageOffsets[sender] - config.MaxLines
 	if offset+config.MaxLines <= 0 {
@@ -114,14 +112,16 @@ func GetLess(sender string) (output []string) { // TODO: Investigate offsets not
 	return
 }
 
-// Default Message size limits for Murmur
-const (
-	MAX_MESSAGE_LENGTH_WITH_IMAGE    = 131072
-	MAX_MESSAGE_LENGTH_WITHOUT_IMAGE = 5000
-)
+func GetLessTable(sender string) string {
+	table := MakeTable("Less Results")
+	for _, v := range GetLess(sender) {
+		table.AddRow(v)
+	}
+	return table.String()
+}
 
 // MakeTable generates a html table with the first parameter as a header on top of the table
-// and subsequents as column headers for the table
+// and subsequent as column headers for the table
 func MakeTable(header string, columns ...string) MessageTable {
 	var b strings.Builder
 	fmt.Fprintf(&b, "<h2 style=\"margin-top:16px; margin-bottom:2px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><b><u><span style=\"font-size:x-large\">%s</span></u></b></h2>", header)
@@ -156,7 +156,7 @@ func (msgTbl MessageTable) String() string {
 
 func FindCoverArtPath(playPath string) string {
 	basedir := filepath.Dir(playPath)
-	// Todo, robust matching
+	// TODO: robust matching
 	if _, err := os.Stat(basedir + "/cover.jpg"); err == nil {
 		return basedir + "/cover.jpg"
 	}
