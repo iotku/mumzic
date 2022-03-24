@@ -22,7 +22,6 @@ type List struct {
 }
 
 func (list *List) Save(hostname string) {
-	log.Println("Saving Playlist for", hostname)
 	var saveList [][]string
 	for i := list.Position; i < len(list.Playlist); i++ {
 		saveList = append(saveList, list.Playlist[i])
@@ -38,7 +37,7 @@ func (list *List) Save(hostname string) {
 	}
 
 	if _, err := os.Stat(PLAYLIST_DIR); os.IsNotExist(err) {
-		if err = os.Mkdir(PLAYLIST_DIR, 0755); err != nil {
+		if err = os.Mkdir(PLAYLIST_DIR, 0700); err != nil {
 			log.Fatalln("failed to create"+PLAYLIST_DIR+"directory:", err)
 		}
 	}
@@ -46,14 +45,15 @@ func (list *List) Save(hostname string) {
 		log.Fatalln("Playlist path, ", PLAYLIST_DIR, "is not a directory.")
 	}
 
-	if err := os.WriteFile(PLAYLIST_DIR+hostname, jsonout, 0644); err != nil {
+	if err := os.WriteFile(PLAYLIST_DIR+hostname, jsonout, 0600); err != nil {
 		log.Fatalln("Failed to write playlist file:", err.Error())
 	}
 }
 
 func (list *List) Load(hostname string) {
-	if _, err := os.Open(PLAYLIST_DIR + hostname); err == nil {
-		file, err := os.ReadFile(PLAYLIST_DIR + hostname)
+	if _, err := os.Open(PLAYLIST_DIR + hostname); //#nosec G304 - hostname considered rusted source
+	err == nil {
+		file, err := os.ReadFile(PLAYLIST_DIR + hostname) //#nosec G304 - hostname considered rusted source
 		if err != nil {
 			log.Fatalln(err.Error())
 		}
