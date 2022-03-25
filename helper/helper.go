@@ -1,10 +1,10 @@
 package helper
 
 import (
+	"layeh.com/gumble/gumble"
 	"log"
 	"regexp"
 	"time"
-	"layeh.com/gumble/gumble"
 )
 
 type msgBundle struct {
@@ -37,13 +37,12 @@ func watchMsgChan() {
 
 		// Buffering logic to avoid messages being dropped by sending too fast
 		// TODO: Should the cooldown for private messages remain the same as for main channel messages?
-		if msgLastSentTime.Add(5 * time.Second).Before(currentTime) {
-			msgBurstCount = 1
-		} else {
-			msgBurstCount++
+		if msgLastSentTime.Add(6 * time.Second).Before(currentTime) {
+			msgBurstCount = 0
 		}
+		msgBurstCount++
 
-		if msgBurstCount >= 5 {
+		if msgBurstCount >= 4 {
 			time.Sleep(1 * time.Second)
 		}
 

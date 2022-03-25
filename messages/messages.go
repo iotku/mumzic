@@ -166,7 +166,7 @@ func FindCoverArtPath(playPath string) string {
 	return ""
 }
 
-// generateCoverArtImage creates a base64 encoded html <img>
+// GenerateCoverArtImg creates a base64 encoded html <img>
 // TODO: Find a way to get generated cover art to follow the larger limits (for messages that contain images)
 //       for now, we make sure the image is less than maxSize to be well below the 5000 text limit the mumble server
 //       imposes by default for text messages (that contain no image)
@@ -178,25 +178,24 @@ func GenerateCoverArtImg(path string) string {
 	}
 	resizedImg := resize.Resize(100, 100, img, resize.Lanczos3)
 	jpegQuality := 60
-	maxSize := 3000
+	maxSize := 4000
 	var buf bytes.Buffer
-	for maxSize >= 3000 && jpegQuality > 0 {
+	var encodedStr string
+	for maxSize >= 4000 && jpegQuality > 0 {
 		buf.Reset()
 		options := jpeg.Options{Quality: jpegQuality}
 		if err := jpeg.Encode(&buf, resizedImg, &options); err != nil {
 			log.Println("Error encoding jpg for base64: ", path, " ", err)
 			return ""
 		}
-		maxSize = len(buf.Bytes())
-		jpegQuality -= 5 // Lower potential future jpegQuality if there's further passes
+		encodedStr = "<img src=\"data:img/jpeg;base64, " + base64.StdEncoding.EncodeToString(buf.Bytes()) + "\" />"
+		maxSize = len(encodedStr)
+		jpegQuality -= 10 // Lower potential future jpegQuality if there's further passes
 	}
-
-	// Size Note: Grows ~1k bytes after encoding
-	encodedStr := base64.StdEncoding.EncodeToString(buf.Bytes())
-	if len(encodedStr) > MAX_MESSAGE_LENGTH_WITHOUT_IMAGE-100 {
+	if len(encodedStr) > MAX_MESSAGE_LENGTH_WITHOUT_IMAGE-150 {
 		return "" // Don't return album art, it's certainly too big!
 	}
-	return "<img src=\"data:img/jpeg;base64, " + encodedStr + "\" />"
+	return encodedStr
 }
 
 func decodeImage(path string) (image.Image, error) {

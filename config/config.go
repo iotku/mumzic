@@ -63,7 +63,7 @@ func NewConfig(hostname string) *Config {
 }
 
 // Save writes the current configuration to the configuration sqlite database
-func (config *Config) Save() { // TODO: verify this is actually working
+func (config *Config) Save() {
 	log.Println("Writing configuration to disk")
 	tx, err := database.Begin()
 	if err != nil {
@@ -129,7 +129,7 @@ func initConfigDB(DatabasePath string) (*sql.Tx, *sql.DB) {
 	       PRAGMA wal_autocheckpoint = 16384;
 	       CREATE TABLE IF NOT EXISTS "config" (
 	           "Hostname" TEXT NOT NULL,
-	           "VolumeLevel" TEXT NOT NULL,
+	           "VolumeLevel" REAL NOT NULL,
 	           "LastChannel" TEXT NOT NULL,
 	           "CmdPrefix" TEXT NOT NULL,
 	           "SongDB" TEXT NOT NULL
