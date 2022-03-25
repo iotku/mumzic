@@ -9,18 +9,18 @@ import (
 )
 
 type Config struct {
-	Volume   float32 // Volume for bot
+	Volume   float32 // Volume level for audio playback
 	Prefix   string  // Prefix for commands in channel chat
-	Channel  string  // Current ChannelName the bot is occupying
+	Channel  string  // Channel the bot is occupying or last occupied
 	Hostname string  // Hostname of connected server
 	Username string  // Username of bot
 }
 
-// Max amount of lines you wish commands to output (before hopefully, going into an unimplemented more buffer)
+// MaxLines is the most lines you wish to output to screen before potentially going into the more/less system
 var MaxLines = 10
 
-// Database generated from gendb
-var Songdb = "./media.db"
+// SongDB is a database generated from genMusicSQLiteDB
+var SongDB = "./media.db"
 
 // Path to configuration db
 var configPath = "./config.db"
@@ -29,14 +29,14 @@ var database *sql.DB
 func init() {
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		tx, _ := initConfigDB(configPath)
-		checkErr(tx.Commit())
+		checkErrPanic(tx.Commit())
 	}
 
 	database = openDB(configPath)
 }
 
 func CloseDatabase() {
-	checkErr(database.Close())
+	checkErrPanic(database.Close())
 }
 
 func NewConfig(hostname string) *Config {
@@ -48,12 +48,12 @@ func NewConfig(hostname string) *Config {
 	}
 
 	var config Config
-	row := database.QueryRow("SELECT * FROM config where Hostname = ?", hostname)
-	err := row.Scan(&config.Hostname, &config.Volume, &config.Channel, &config.Prefix, &Songdb)
+	row := database.QueryRow("SELECT * FROM config WHERE Hostname = ?", hostname)
+	err := row.Scan(&config.Hostname, &config.Volume, &config.Channel, &config.Prefix, &SongDB)
 	if err != nil && err == sql.ErrNoRows { // create new configuration
 		tx, _ := database.Begin()
 		writeConfigToDB(defaultConfig, prepareStatementInsert(tx))
-		checkErr(tx.Commit())
+		checkErrPanic(tx.Commit())
 		return &defaultConfig
 	} else if err != nil {
 		panic("NewConfig failed")
@@ -62,7 +62,7 @@ func NewConfig(hostname string) *Config {
 	return &config
 }
 
-// SaveConfig writes the current configuraiton to the configuration sqlite database
+// Save writes the current configuration to the configuration sqlite database
 func (config *Config) Save() { // TODO: verify this is actually working
 	log.Println("Writing configuration to disk")
 	tx, err := database.Begin()
@@ -73,8 +73,8 @@ func (config *Config) Save() { // TODO: verify this is actually working
 	defer stmt.Close()
 	// There must be a better way to do this, but I'm tired and this will do for now.
 	_, err = stmt.Exec(config.Volume, config.Channel, config.Prefix, config.Hostname)
-	checkErr(err)
-	checkErr(tx.Commit())
+	checkErrPanic(err)
+	checkErrPanic(tx.Commit())
 }
 
 func prepareUpdate(tx *sql.Tx) *sql.Stmt {
@@ -94,23 +94,24 @@ func prepareStatementInsert(tx *sql.Tx) *sql.Stmt {
 }
 
 func writeConfigToDB(config Config, stmt *sql.Stmt) {
-	_, err := stmt.Exec(config.Hostname, config.Volume, config.Channel, config.Prefix, Songdb)
+	_, err := stmt.Exec(config.Hostname, config.Volume, config.Channel, config.Prefix, SongDB)
 	if err != nil {
 		log.Fatalln("Writing Config Failed!:", err.Error())
 	}
 }
 
-func openDB(dbfile string) *sql.DB {
-	database, err := sql.Open("sqlite3", dbfile)
-	checkErr(err)
+// openDB returns an opened sqlite3 database
+func openDB(DatabasePath string) *sql.DB {
+	database, err := sql.Open("sqlite3", DatabasePath)
+	checkErrPanic(err)
 	return database
 }
 
-func initConfigDB(dbfile string) (*sql.Tx, *sql.DB) {
-	var db *sql.DB
-	db, err := sql.Open("sqlite3", dbfile)
+func initConfigDB(DatabasePath string) (*sql.Tx, *sql.DB) {
+	var database *sql.DB
+	database, err := sql.Open("sqlite3", DatabasePath)
 
-	checkErr(err)
+	checkErrPanic(err)
 
 	ddl := `
 	       PRAGMA automatic_index = ON;
@@ -135,20 +136,21 @@ func initConfigDB(dbfile string) (*sql.Tx, *sql.DB) {
 	       );
 	   `
 
-	_, err = db.Exec(ddl)
+	_, err = database.Exec(ddl)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	tx, err := db.Begin()
+	tx, err := database.Begin()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return tx, db
+	return tx, database
 }
 
-func checkErr(err error) {
+// checkErrPanic panics if the provided error is not nil
+func checkErrPanic(err error) {
 	if err != nil {
 		panic(err)
 	}

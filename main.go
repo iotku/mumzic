@@ -18,13 +18,13 @@ import (
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s: [flags]\n", os.Args[0])
+		fmt.Printf("Usage of %s: [flags]\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 
 	var channelPlayer *playback.Player
 	var bConfig *config.Config
-	// Start main gumble loop
+	// Start main Gumble loop
 	gumbleutil.Main(gumbleutil.AutoBitrate, gumbleutil.Listener{
 		Connect: func(e *gumble.ConnectEvent) {
 			if hostName := flag.Lookup("server").Value; hostName == nil {
@@ -41,7 +41,7 @@ func main() {
 
 			channelPlayer = playback.NewPlayer(e.Client, bConfig)
 			channelPlayer.Playlist.Load(bConfig.Hostname)
-			fmt.Printf("audio player loaded! (%d files)\n", search.MaxDBID)
+			fmt.Printf("audio player loaded! (%d files)\n", search.MaxID)
 		},
 		TextMessage: func(e *gumble.TextMessageEvent) {
 			if e.Sender == nil {

@@ -2,6 +2,7 @@ package playback
 
 import (
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/iotku/mumzic/config"
@@ -132,7 +133,6 @@ func (player *Player) WaitForStop() {
 }
 
 func (player *Player) Play(path string) {
-	// Stop if currently playing
 	player.Stop()
 	path = helper.StripHTMLTags(path)
 	if strings.HasPrefix(path, "http") {
@@ -147,17 +147,13 @@ func (player *Player) Play(path string) {
 	if artPath != "" {
 		artImg = messages.GenerateCoverArtImg(artPath)
 	}
-	//output := artImg
 	output := " <h2><u>Now Playing</u></h2><table><tr><td>" +
 		artImg + "</td><td>" +
 		"<table><tr><td>" +
 		player.Playlist.GetCurrentHuman() +
 		"</td></tr>" +
-		//"<tr><td>Another row :)</td></tr></table>" +
+		"<tr><td><b>" + strconv.Itoa(player.Playlist.Count()) + "</b> songs remain</td></tr></table>" +
 		"</td></tr></table>"
-
-	// println("NoIMG Limit: ", len(output) > messages.MAX_MESSAGE_LENGTH_WITHOUT_IMAGE)
-	// println("IMG Limit: ", len(output) > messages.MAX_MESSAGE_LENGTH_WITH_IMAGE)
 	helper.ChanMsg(player.client, output)
 	player.client.Self.SetComment(output)
 	go player.WaitForStop()
@@ -200,7 +196,7 @@ func (player *Player) Skip(amount int) {
 // PlayYT streams a URL through ytdl
 func (player *Player) PlayYT(url string) {
 	url = helper.StripHTMLTags(url)
-	if youtubedl.IsWhiteListedURL(url) == false {
+	if !youtubedl.IsWhiteListedURL(url) {
 		log.Printf("PlayYT Failed: URL %s Doesn't meet whitelist", url)
 		return
 	}

@@ -9,6 +9,7 @@ import (
 	"layeh.com/gumble/gumbleffmpeg"
 )
 
+// IsWhiteListedURL returns true if URL begins with an acceptable URL for ytdl
 func IsWhiteListedURL(url string) bool {
 	// ! Don't forget to end url with / !
 	whiteListedURLS := []string{"https://www.youtube.com/", "https://music.youtube.com/", "https://youtu.be/", "https://soundcloud.com/"}

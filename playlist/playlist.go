@@ -13,7 +13,7 @@ import (
 	"github.com/iotku/mumzic/youtubedl"
 )
 
-const PLAYLIST_DIR = "playlists/" // Directory for saving/loading playlists
+const Directory = "playlists/" // Directory for saving/loading playlists
 
 // List contains a 2D slice of "Human Friendly" titles and raw paths as well as its position along the playlist
 type List struct {
@@ -31,29 +31,29 @@ func (list *List) Save(hostname string) {
 		return
 	}
 
-	jsonout, err := json.Marshal(saveList)
+	output, err := json.Marshal(saveList)
 	if err != nil {
 		log.Fatalln("failed to marshal playlist json")
 	}
 
-	if _, err := os.Stat(PLAYLIST_DIR); os.IsNotExist(err) {
-		if err = os.Mkdir(PLAYLIST_DIR, 0700); err != nil {
-			log.Fatalln("failed to create"+PLAYLIST_DIR+"directory:", err)
+	if _, err := os.Stat(Directory); os.IsNotExist(err) {
+		if err = os.Mkdir(Directory, 0700); err != nil {
+			log.Fatalln("failed to create"+Directory+"directory:", err)
 		}
 	}
-	if fileInfo, _ := os.Stat(PLAYLIST_DIR); !fileInfo.IsDir() {
-		log.Fatalln("Playlist path, ", PLAYLIST_DIR, "is not a directory.")
+	if fileInfo, _ := os.Stat(Directory); !fileInfo.IsDir() {
+		log.Fatalln("Playlist path, ", Directory, "is not a directory.")
 	}
 
-	if err := os.WriteFile(PLAYLIST_DIR+hostname, jsonout, 0600); err != nil {
+	if err := os.WriteFile(Directory+hostname, output, 0600); err != nil {
 		log.Fatalln("Failed to write playlist file:", err.Error())
 	}
 }
 
 func (list *List) Load(hostname string) {
-	if _, err := os.Open(PLAYLIST_DIR + hostname); //#nosec G304 - hostname considered rusted source
+	if _, err := os.Open(Directory + hostname); //#nosec G304 - hostname considered rusted source
 	err == nil {
-		file, err := os.ReadFile(PLAYLIST_DIR + hostname) //#nosec G304 - hostname considered rusted source
+		file, err := os.ReadFile(Directory + hostname) //#nosec G304 - hostname considered rusted source
 		if err != nil {
 			log.Fatalln(err.Error())
 		}
@@ -166,7 +166,7 @@ func (list *List) pAdd(path, human string) {
 }
 
 func (list *List) QueueID(trackID int) (human string) {
-	if trackID > search.MaxDBID || trackID < 1 {
+	if trackID > search.MaxID || trackID < 1 {
 		return ""
 	}
 	path, human := search.GetTrackById(trackID)
@@ -184,6 +184,7 @@ func (list *List) queueYT(url, human string) string {
 	return human
 }
 
+// Count is the amount of songs enqueued on the playlist
 func (list *List) Count() int {
 	return list.Size() - list.Position
 }

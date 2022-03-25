@@ -10,14 +10,14 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var MaxDBID int
+// MaxID is the largest identifier possible to query.
+var MaxID int
 
 func init() {
-	if _, err := os.Stat(config.Songdb); os.IsNotExist(err) {
-		MaxDBID = 0
+	if _, err := os.Stat(config.SongDB); os.IsNotExist(err) {
+		MaxID = 0 // No media.db
 	} else {
-		// Number of rows (not to exceed) in sqlite database
-		MaxDBID = getMaxID(config.Songdb)
+		MaxID = getMaxID(config.SongDB)
 	}
 }
 
@@ -39,12 +39,13 @@ func getMaxID(database string) int {
 	return count
 }
 
+// GetRandomTrackIDs asks the database for n random IDs from the database
 func GetRandomTrackIDs(amount int) (idList []int) {
-	if getMaxID(config.Songdb) == 0 {
+	if getMaxID(config.SongDB) == 0 {
 		return
 	}
 
-	db, err := sql.Open("sqlite3", config.Songdb)
+	db, err := sql.Open("sqlite3", config.SongDB)
 	defer db.Close()
 	checkErrPanic(err)
 	var rows *sql.Rows
@@ -60,14 +61,13 @@ func GetRandomTrackIDs(amount int) (idList []int) {
 	return
 }
 
-// Query SQLite database to get filepath related to ID
+// GetTrackById returns the raw path and "Human" friendly output of a track by its ID
 func GetTrackById(trackID int) (filepath, humanout string) {
-	// Update MaxDBID when searching via ID to accommodate possibility of database changing size while mumzic is running
-	MaxDBID = getMaxID(config.Songdb)
-	if trackID > MaxDBID {
+	MaxID = getMaxID(config.SongDB)
+	if trackID > MaxID {
 		return "", ""
 	}
-	db, err := sql.Open("sqlite3", config.Songdb)
+	db, err := sql.Open("sqlite3", config.SongDB)
 	checkErrPanic(err)
 	defer db.Close()
 	var path, artist, title, album string
@@ -85,7 +85,7 @@ func GetTrackById(trackID int) (filepath, humanout string) {
 
 func SearchALL(Query string) []string {
 	Query = fmt.Sprintf("%%%s%%", Query)
-	rows := makeDbQuery(config.Songdb, "SELECT ROWID, * FROM music where (artist || \" \" || title)  LIKE ? LIMIT 25", Query)
+	rows := makeDbQuery(config.SongDB, "SELECT ROWID, * FROM music where (artist || \" \" || title)  LIKE ? LIMIT 25", Query)
 	defer rows.Close()
 
 	var rowID int

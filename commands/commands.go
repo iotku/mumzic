@@ -149,11 +149,10 @@ func rand(player *playback.Player, sender string, isPrivate bool, arg string) {
 	value, err := strconv.Atoi(arg)
 	if err != nil || value < 1 {
 		value = 1
-	}
-
-	if value > config.MaxLines {
+	} else if value > config.MaxLines {
 		value = config.MaxLines
 	}
+	
 	plistOrigSize := player.Playlist.Size()
 	hadNext := player.Playlist.HasNext()
 
