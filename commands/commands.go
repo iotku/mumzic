@@ -56,6 +56,22 @@ func CommandDispatch(player *playback.Player, message string, isPrivate bool, se
 		helper.MsgDispatch(player.GetClient(), isPrivate, sender, messages.GetMoreTable(sender))
 	case "less":
 		helper.MsgDispatch(player.GetClient(), isPrivate, sender, messages.GetLessTable(sender))
+	case "summon":
+		joinUserChannel(player, sender)
+	}
+}
+
+func joinUserChannel(player *playback.Player, sender string) {
+	client := player.GetClient()
+	user := client.Users.Find(sender)
+	if user == nil {
+		return // user not found
+	}
+	channel := client.Channels.Find(user.Channel.Name)
+
+	client.Self.Move(channel)
+	if client.Self.Channel.Name == channel.Name {
+		player.TargetUsers()
 	}
 }
 
@@ -152,7 +168,7 @@ func rand(player *playback.Player, sender string, isPrivate bool, arg string) {
 	} else if value > config.MaxLines {
 		value = config.MaxLines
 	}
-	
+
 	plistOrigSize := player.Playlist.Size()
 	hadNext := player.Playlist.HasNext()
 
