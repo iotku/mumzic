@@ -4,7 +4,7 @@ Note: PMing the bot currently doesn't have the prefix for commands, so **!summon
 
 ### Control
 | Command | Info                      | Notes                                         |
-|-------------------------------------------------------------------------------------|
+|---------|---------------------------|-----------------------------------------------|
 | !summon | Bot joins sender's channel| PM the bot if you are not in the same channel | 
 
 ### Playback
@@ -17,14 +17,14 @@ Note: PMing the bot currently doesn't have the prefix for commands, so **!summon
 
 
 ### Playlist
-| Command           | Info                                  | Notes                                                                     |
-|-------------------|---------------------------------------|---------------------------------------------------------------------------|
+| Command          | Info                                  | Notes                                                                     |
+|------------------|---------------------------------------|---------------------------------------------------------------------------|
 | list             | Show current track list               |                                                                           |
 | search           | Find tracks from local files          |                                                                           |
 
 ### Audio
-| Command           | Info                                  | Notes                                                                     |
-|-------------------|---------------------------------------|---------------------------------------------------------------------------|
+| Command          | Info                                  | Notes                                                                     |
+|------------------|---------------------------------------|---------------------------------------------------------------------------|
 | volume (1-9)     | Set Volume                            | Eventually will be percentage based                                       |
 | target           | Send audio to you directly            | Works no matter what channel you are in as long as Whispers are enabled   |
 | untarget         | Don't send audio to you directly      | Remove you from audio targetting list                                     |
