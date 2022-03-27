@@ -1,6 +1,7 @@
 ## Command List
 Currently the bot defaults to "!" for the command prefix, therefore to use **play** you would type **!play** into the messagebox.
-Note: PMing the bot currently doesn't have the prefix for commands, so **!summon** would just be **summon*
+
+Note: PMing the bot currently doesn't have the prefix for commands, so **!summon** would just be **summon**
 
 ### Control
 | Command | Info                      | Notes                                         |
