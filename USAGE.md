@@ -26,7 +26,7 @@ Note: PMing the bot currently doesn't have the prefix for commands, so **!summon
 ### Audio
 | Command          | Info                                  | Notes                                                                     |
 |------------------|---------------------------------------|---------------------------------------------------------------------------|
-| volume (1-9)     | Set Volume                            | Eventually will be percentage based                                       |
+| volume [1-100]   | Set Volume percentage                 |                                                                           |
 | target           | Send audio to you directly            | Works no matter what channel you are in as long as Whispers are enabled   |
 | untarget         | Don't send audio to you directly      | Remove you from audio targetting list                                     |
 
