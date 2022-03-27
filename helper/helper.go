@@ -1,10 +1,11 @@
 package helper
 
 import (
-	"layeh.com/gumble/gumble"
 	"log"
 	"regexp"
 	"time"
+
+	"layeh.com/gumble/gumble"
 )
 
 type msgBundle struct {
@@ -17,6 +18,9 @@ type msgBundle struct {
 var msgBurstCount uint
 var msgLastSentTime time.Time
 var msgChan chan (msgBundle)
+
+// How long to wait when throttling
+const waitDuration = 1*time.Second + 120*time.Millisecond
 
 func init() {
 	msgBurstCount = 0
@@ -42,8 +46,8 @@ func watchMsgChan() {
 		}
 		msgBurstCount++
 
-		if msgBurstCount >= 4 {
-			time.Sleep(1 * time.Second)
+		if msgBurstCount >= 3 {
+			time.Sleep(waitDuration)
 		}
 
 		// Actually send message to mumble server
