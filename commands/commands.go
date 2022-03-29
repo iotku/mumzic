@@ -14,7 +14,7 @@ import (
 
 func CommandDispatch(player *playback.Player, message string, isPrivate bool, sender string) {
 	helper.DebugPrintln("IsPlaying:", player.IsPlaying(), "DoNext:", player.DoNext)
-	command, arg := getCommandAndArg(message, isPrivate, player.Config, player.GetClient().Self.Name)
+	command, arg := getCommandAndArg(message, isPrivate, player.Config, player.Client.Self.Name)
 
 	switch command {
 	case "play", "add":
@@ -41,7 +41,7 @@ func CommandDispatch(player *playback.Player, message string, isPrivate bool, se
 		player.RemoveTarget(sender)
 	case "help":
 		helper.MsgDispatch(
-			player.GetClient(),
+			player.Client,
 			isPrivate,
 			sender,
 			"https://github.com/iotku/mumzic/blob/master/USAGE.md",
@@ -53,16 +53,16 @@ func CommandDispatch(player *playback.Player, message string, isPrivate bool, se
 	case "saveconf":
 		player.Config.Save()
 	case "more":
-		helper.MsgDispatch(player.GetClient(), isPrivate, sender, messages.GetMoreTable(sender))
+		helper.MsgDispatch(player.Client, isPrivate, sender, messages.GetMoreTable(sender))
 	case "less":
-		helper.MsgDispatch(player.GetClient(), isPrivate, sender, messages.GetLessTable(sender))
+		helper.MsgDispatch(player.Client, isPrivate, sender, messages.GetLessTable(sender))
 	case "summon":
 		joinUserChannel(player, sender)
 	}
 }
 
 func joinUserChannel(player *playback.Player, sender string) {
-	client := player.GetClient()
+	client := player.Client
 	user := client.Users.Find(sender)
 	if user == nil {
 		return // user not found
@@ -78,11 +78,11 @@ func joinUserChannel(player *playback.Player, sender string) {
 func addSongToQueue(id string, sender string, isPrivate bool, player *playback.Player) bool {
 	queued, err := player.Playlist.AddToQueue(id)
 	if err != nil {
-		helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Error: "+err.Error())
+		helper.MsgDispatch(player.Client, isPrivate, sender, "Error: "+err.Error())
 		return false
 	}
 
-	helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Queued: "+queued)
+	helper.MsgDispatch(player.Client, isPrivate, sender, "Queued: "+queued)
 	return true
 }
 
@@ -128,12 +128,12 @@ func vol(player *playback.Player, sender string, isPrivate bool, arg string) {
 	if arg != "" {
 		argInt, err := strconv.Atoi(arg)
 		if err != nil || argInt <= 0 || argInt > 100 {
-			helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Invalid Volume: Valid range <b>[1-100]</b>")
+			helper.MsgDispatch(player.Client, isPrivate, sender, "Invalid Volume: Valid range <b>[1-100]</b>")
 			return
 		}
 		player.SetVolume(0.01 * float32(argInt))
 	}
-	helper.MsgDispatch(player.GetClient(), isPrivate, sender, "Current Volume: "+fmt.Sprintf("%f", player.Volume))
+	helper.MsgDispatch(player.Client, isPrivate, sender, "Current Volume: "+fmt.Sprintf("%f", player.Volume))
 }
 
 func list(player *playback.Player, sender string, isPrivate bool) {
@@ -146,7 +146,7 @@ func list(player *playback.Player, sender string, isPrivate bool) {
 		output.AddRow("There are " + strconv.Itoa(extraCount) + " extra entries.")
 		output.AddRow("Use <b>more</b> and <b>less</b> to see them.")
 	}
-	helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
+	helper.MsgDispatch(player.Client, isPrivate, sender, output.String())
 }
 
 func find(player *playback.Player, sender string, isPrivate bool, arg string) {
@@ -158,7 +158,7 @@ func find(player *playback.Player, sender string, isPrivate bool, arg string) {
 		output.AddRow("There are " + strconv.Itoa(extraCount) + " additional results.")
 		output.AddRow("Use <b>more</b> and <b>less</b> to see them.")
 	}
-	helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
+	helper.MsgDispatch(player.Client, isPrivate, sender, output.String())
 }
 
 func rand(player *playback.Player, sender string, isPrivate bool, arg string) {
@@ -182,7 +182,7 @@ func rand(player *playback.Player, sender string, isPrivate bool, arg string) {
 			output.AddRow("Error: <b>" + "failed to add ID#" + strconv.Itoa(v) + "</b>")
 		}
 	}
-	helper.MsgDispatch(player.GetClient(), isPrivate, sender, output.String())
+	helper.MsgDispatch(player.Client, isPrivate, sender, output.String())
 
 	if !player.IsPlaying() && plistOrigSize == 0 {
 		player.PlayCurrent()

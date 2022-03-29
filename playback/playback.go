@@ -18,7 +18,7 @@ import (
 
 type Player struct {
 	stream   *gumbleffmpeg.Stream
-	client   *gumble.Client
+	Client   *gumble.Client
 	targets  []*gumble.User
 	Playlist playlist.List
 	Volume   float32
@@ -27,7 +27,7 @@ type Player struct {
 }
 
 func (player *Player) AddTarget(username string) {
-	user := player.client.Users.Find(username)
+	user := player.Client.Users.Find(username)
 	if user == nil {
 		return // user not found
 	}
@@ -43,7 +43,7 @@ func (player *Player) AddTarget(username string) {
 }
 
 func (player *Player) RemoveTarget(username string) {
-	user := player.client.Users.Find(username)
+	user := player.Client.Users.Find(username)
 	for i, v := range player.targets {
 		if v.UserID == user.UserID {
 			player.targets = append(player.targets[:i], player.targets[i+1:]...)
@@ -55,19 +55,19 @@ func (player *Player) RemoveTarget(username string) {
 
 func (player *Player) TargetUsers() {
 	if len(player.targets) == 0 {
-		player.client.VoiceTarget = nil
+		player.Client.VoiceTarget = nil
 		return
 	}
 	println("Target usrs and chan")
-	player.client.VoiceTarget = &gumble.VoiceTarget{ID: uint32(2)}
-	ownChannel := player.client.Self.Channel
-	player.client.VoiceTarget.AddChannel(ownChannel, false, false, "radio")
+	player.Client.VoiceTarget = &gumble.VoiceTarget{ID: uint32(2)}
+	ownChannel := player.Client.Self.Channel
+	player.Client.VoiceTarget.AddChannel(ownChannel, false, false, "radio")
 	packet := MumbleProto.VoiceTarget{
-		Id:      &player.client.VoiceTarget.ID,
+		Id:      &player.Client.VoiceTarget.ID,
 		Targets: make([]*MumbleProto.VoiceTarget_Target, 0, len(player.targets)+1),
 	}
 	for _, v := range player.targets {
-		player.client.VoiceTarget.AddUser(v)
+		player.Client.VoiceTarget.AddUser(v)
 		packet.Targets = append(packet.Targets, &MumbleProto.VoiceTarget_Target{
 			Session: []uint32{v.Session},
 		})
@@ -77,7 +77,7 @@ func (player *Player) TargetUsers() {
 		ChannelId: &ownChannel.ID,
 	})
 
-	err := player.client.Conn.WriteProto(&packet)
+	err := player.Client.Conn.WriteProto(&packet)
 	if err != nil {
 		log.Println(err)
 	}
@@ -86,7 +86,7 @@ func (player *Player) TargetUsers() {
 func NewPlayer(client *gumble.Client, config *config.Config) *Player {
 	return &Player{
 		stream:  nil,
-		client:  client,
+		Client:  client,
 		targets: make([]*gumble.User, 0),
 		Playlist: playlist.List{
 			Playlist: make([][]string, 0),
@@ -96,10 +96,6 @@ func NewPlayer(client *gumble.Client, config *config.Config) *Player {
 		DoNext: "stop", // stop, next
 		Config: config,
 	}
-}
-
-func (player *Player) GetClient() *gumble.Client {
-	return player.client
 }
 
 func (player *Player) IsStopped() bool {
@@ -120,7 +116,7 @@ func (player *Player) WaitForStop() {
 	player.stream.Wait()
 	switch player.DoNext {
 	case "stop":
-		player.client.Self.SetComment("Not Playing.")
+		player.Client.Self.SetComment("Not Playing.")
 	case "next":
 		if player.Playlist.HasNext() {
 			player.Playlist.Next()
@@ -154,8 +150,8 @@ func (player *Player) Play(path string) {
 		"</td></tr>" +
 		"<tr><td><b>" + strconv.Itoa(player.Playlist.Count()) + "</b> songs remain</td></tr></table>" +
 		"</td></tr></table>"
-	helper.ChanMsg(player.client, output)
-	player.client.Self.SetComment(output)
+	helper.ChanMsg(player.Client, output)
+	player.Client.Self.SetComment(output)
 	go player.WaitForStop()
 }
 
@@ -171,7 +167,7 @@ func (player *Player) Stop() {
 }
 
 func (player *Player) PlayFile(path string) {
-	player.stream = gumbleffmpeg.New(player.client, gumbleffmpeg.SourceFile(path))
+	player.stream = gumbleffmpeg.New(player.Client, gumbleffmpeg.SourceFile(path))
 	player.stream.Volume = player.Volume
 
 	if err := player.stream.Play(); err != nil {
@@ -201,7 +197,7 @@ func (player *Player) PlayYT(url string) {
 		return
 	}
 
-	player.stream = gumbleffmpeg.New(player.client, youtubedl.GetYtdlSource(url))
+	player.stream = gumbleffmpeg.New(player.Client, youtubedl.GetYtdlSource(url))
 	player.stream.Volume = player.Volume
 
 	if err := player.stream.Play(); err != nil {
