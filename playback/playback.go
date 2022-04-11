@@ -131,10 +131,16 @@ func (player *Player) WaitForStop() {
 func (player *Player) Play(path string) {
 	player.Stop()
 	path = helper.StripHTMLTags(path)
+	var err error
 	if strings.HasPrefix(path, "http") {
 		player.PlayYT(path)
 	} else {
-		player.PlayFile(path)
+		err = player.PlayFile(path)
+	}
+
+	if err != nil {
+		helper.ChanMsg(player.Client, "<b style=\"color:red\">Error: </b>"+err.Error())
+		return
 	}
 	player.DoNext = "next"
 
@@ -166,7 +172,11 @@ func (player *Player) Stop() {
 	}
 }
 
-func (player *Player) PlayFile(path string) {
+func (player *Player) PlayFile(path string) error {
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		log.Println("[Error] file not found:", path)
+		return errors.New("not found")
+	}
 	player.stream = gumbleffmpeg.New(player.Client, gumbleffmpeg.SourceFile(path))
 	player.stream.Volume = player.Volume
 
@@ -175,6 +185,7 @@ func (player *Player) PlayFile(path string) {
 	} else {
 		helper.DebugPrintln("Playing:", path)
 	}
+	return nil
 }
 
 func (player *Player) Skip(amount int) {
