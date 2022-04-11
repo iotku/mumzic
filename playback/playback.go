@@ -1,7 +1,9 @@
 package playback
 
 import (
+	"errors"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 
@@ -113,6 +115,9 @@ func (player *Player) PlayCurrent() {
 
 // WaitForStop waits for the playback stream to end and performs the upcoming action
 func (player *Player) WaitForStop() {
+	if player.stream == nil {
+		return
+	}
 	player.stream.Wait()
 	switch player.DoNext {
 	case "stop":
