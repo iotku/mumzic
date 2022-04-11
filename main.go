@@ -24,7 +24,6 @@ func main() {
 
 	var channelPlayer *playback.Player
 	var bConfig *config.Config
-	// Start main Gumble loop
 	gumbleutil.Main(gumbleutil.AutoBitrate, gumbleutil.Listener{
 		Connect: func(e *gumble.ConnectEvent) {
 			if hostName := flag.Lookup("server").Value; hostName == nil {
@@ -45,7 +44,6 @@ func main() {
 		},
 		TextMessage: func(e *gumble.TextMessageEvent) {
 			if e.Sender == nil {
-				fmt.Println("Sender Was Null")
 				return
 			}
 
@@ -59,7 +57,6 @@ func main() {
 		ChannelChange: func(e *gumble.ChannelChangeEvent) {
 			if bConfig != nil && e.Channel.Name != "Root" {
 				bConfig.Channel = e.Channel.Name
-				fmt.Println("Last Channel Changed to", bConfig.Channel)
 			}
 			if channelPlayer != nil {
 				channelPlayer.TargetUsers()

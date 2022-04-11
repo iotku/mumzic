@@ -159,7 +159,8 @@ func (player *Player) Play(path string) {
 		"<table><tr><td>" +
 		player.Playlist.GetCurrentHuman() +
 		"</td></tr>" +
-		"<tr><td><b>" + strconv.Itoa(player.Playlist.Count()) + "</b> songs remain</td></tr></table>" +
+		"<tr><td><b>" + strconv.Itoa(player.Playlist.Count()) +
+		"</b> songs remain</td></tr></table>" +
 		"</td></tr></table>"
 	helper.ChanMsg(player.Client, output)
 	player.Client.Self.SetComment(output)

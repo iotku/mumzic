@@ -58,6 +58,10 @@ func CommandDispatch(player *playback.Player, message string, isPrivate bool, se
 		helper.MsgDispatch(player.Client, isPrivate, sender, messages.GetLessTable(sender))
 	case "summon":
 		joinUserChannel(player, sender)
+	case "uinfo":
+		info := player.Client.Self.Hash
+		println(info)
+		helper.MsgDispatch(player.Client, isPrivate, sender, info)
 	}
 }
 
@@ -93,9 +97,9 @@ func getCommandAndArg(
 	username string,
 ) (command string, arg string) {
 	var offset int
-	if !isPrivate && strings.HasPrefix(message, config.Prefix) {
+	if strings.HasPrefix(message, config.Prefix) {
 		message = message[len(config.Prefix):]
-	} else if strings.HasPrefix(message, username) {
+	} else if !isPrivate && strings.HasPrefix(message, username) {
 		offset = 1
 	}
 	split := strings.Split(message, " ")
@@ -137,27 +141,22 @@ func vol(player *playback.Player, sender string, isPrivate bool, arg string) {
 }
 
 func list(player *playback.Player, sender string, isPrivate bool) {
-	output := messages.MakeTable("Playlist", "# Track Name")
 	playlist := player.Playlist.GetList(player.Playlist.Count())
-	extraCount := messages.SaveMoreRows(sender, playlist, output)
+
+	output := messages.MakeTable("Playlist", "# Track Name")
+	messages.SaveMoreRows(sender, playlist, output)
 	output.AddRow("---")
 	output.AddRow(strconv.Itoa(player.Playlist.Count()) + " Track(s) queued.")
-	if extraCount > 0 {
-		output.AddRow("There are " + strconv.Itoa(extraCount) + " extra entries.")
-		output.AddRow("Use <b>more</b> and <b>less</b> to see them.")
-	}
+
 	helper.MsgDispatch(player.Client, isPrivate, sender, output.String())
 }
 
 func find(player *playback.Player, sender string, isPrivate bool, arg string) {
 	results := search.SearchALL(arg)
+
 	output := messages.MakeTable("Search Results")
-	extraCount := messages.SaveMoreRows(sender, results, output)
-	if extraCount > 0 {
-		output.AddRow("---")
-		output.AddRow("There are " + strconv.Itoa(extraCount) + " additional results.")
-		output.AddRow("Use <b>more</b> and <b>less</b> to see them.")
-	}
+	messages.SaveMoreRows(sender, results, output)
+
 	helper.MsgDispatch(player.Client, isPrivate, sender, output.String())
 }
 

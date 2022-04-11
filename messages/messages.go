@@ -62,6 +62,9 @@ func SaveMoreRows(sender string, rows []string, table MessageTable) int {
 	}
 	if extra != 0 {
 		messageOffsets[sender] = config.MaxLines
+		table.AddRow("---")
+		table.AddRow("There are " + strconv.Itoa(extra) + " additional results.")
+		table.AddRow("Use <b>more</b> and <b>less</b> to see them.")
 	}
 
 	return extra
