@@ -12,9 +12,9 @@ import (
 	"github.com/iotku/mumzic/search"
 )
 
-func CommandDispatch(player *playback.Player, message string, isPrivate bool, sender string) {
+func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender string) {
 	helper.DebugPrintln("IsPlaying:", player.IsPlaying(), "DoNext:", player.DoNext)
-	command, arg := getCommandAndArg(message, isPrivate, player.Config, player.Client.Self.Name)
+	command, arg := getCommandAndArg(msg, player.Client.Self.Name, isPrivate, player.Config)
 
 	switch command {
 	case "play", "add":
@@ -79,7 +79,7 @@ func joinUserChannel(player *playback.Player, sender string) {
 	}
 }
 
-func addSongToQueue(id string, sender string, isPrivate bool, player *playback.Player) bool {
+func addSongToQueue(id, sender string, isPrivate bool, player *playback.Player) bool {
 	queued, err := player.Playlist.AddToQueue(id)
 	if err != nil {
 		helper.MsgDispatch(player.Client, isPrivate, sender, "Error: "+err.Error())
@@ -90,19 +90,14 @@ func addSongToQueue(id string, sender string, isPrivate bool, player *playback.P
 	return true
 }
 
-func getCommandAndArg(
-	message string,
-	isPrivate bool,
-	config *config.Config,
-	username string,
-) (command string, arg string) {
+func getCommandAndArg(msg, name string, isPrivate bool, conf *config.Config) (command, arg string) {
 	var offset int
-	if strings.HasPrefix(message, config.Prefix) {
-		message = message[len(config.Prefix):]
-	} else if !isPrivate && strings.HasPrefix(message, username) {
+	if strings.HasPrefix(msg, conf.Prefix) {
+		msg = msg[len(conf.Prefix):]
+	} else if !isPrivate && strings.HasPrefix(msg, name) {
 		offset = 1
 	}
-	split := strings.Split(message, " ")
+	split := strings.Split(msg, " ")
 	for i := offset + 1; i < len(split); i++ {
 		arg += split[i] + " "
 	}

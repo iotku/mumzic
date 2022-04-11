@@ -61,16 +61,16 @@ func GetRandomTrackIDs(amount int) (idList []int) {
 	return
 }
 
-// GetTrackById returns the raw path and "Human" friendly output of a track by its ID
-func GetTrackById(trackID int) (filepath, humanout string) {
+// GetTrackById returns the "Human" friendly output and raw path of a track by its ID
+func GetTrackById(trackID int) (human, path string) {
 	MaxID = getMaxID(config.SongDB)
-	if trackID > MaxID {
+	if trackID > MaxID || trackID < 1 {
 		return "", ""
 	}
 	db, err := sql.Open("sqlite3", config.SongDB)
 	checkErrPanic(err)
 	defer db.Close()
-	var path, artist, title, album string
+	var artist, title, album string
 	err = db.QueryRow("select path,artist,title,album from MUSIC where ROWID = ?", trackID).Scan(&path, &artist, &title, &album)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
@@ -79,8 +79,8 @@ func GetTrackById(trackID int) (filepath, humanout string) {
 	}
 	checkErrPanic(err)
 
-	humanout = artist + " - " + title
-	return path, humanout
+	human = artist + " - " + title
+	return
 }
 
 func SearchALL(Query string) []string {

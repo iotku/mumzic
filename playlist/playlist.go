@@ -107,7 +107,6 @@ func (list *List) Next() string {
 
 // Skip moves the position by amount, generally this should be called by a playback.Player
 func (list *List) Skip(amount int) string {
-	println("Skipping", amount)
 	if list.Size()+amount < 0 || !list.HasNext() {
 		return ""
 	}
@@ -132,33 +131,38 @@ func (list *List) IsEmpty() bool {
 // AddToQueue ads either a filesystem ID or internet URL onto the Playlist queue. On success, it returns a human friendly
 // title and err is nil. On failure (ID not found or not whitelisted URL) returns empty string "" and a respective error.
 func (list *List) AddToQueue(path string) (string, error) {
-	// For YTDL URLS
-	path = helper.StripHTMLTags(path)
+	human, path, err := getHumanAndPath(path) // Note: we check for whitelist urls here
+	if err != nil || path == "" {
+		return "", errors.New("nothing added. (Invalid ID?)")
+	}
+
+	if strings.HasPrefix(path, "http") {
+		list.queueYT(path, human)
+	} else {
+		list.pAdd(path, human)
+	}
+
+	return human, nil
+}
+
+func getHumanAndPath(arg string) (human, path string, err error) {
+	path = helper.StripHTMLTags(arg)
 	if strings.HasPrefix(path, "http") && youtubedl.IsWhiteListedURL(path) == true {
-		// add to Playlist
-		// Get "Human" from web page title (I hope this doesn't trigger anti-spam...)
-		var human string
-		title := youtubedl.GetYtdlTitle(path)
-		helper.DebugPrintln("Title:", title)
-		if title != "" {
-			human = title
-		} else {
+		human = youtubedl.GetYtdlTitle(path)
+		if human == "" {
 			human = path
 		}
-		list.queueYT(path, human)
-		return human, nil
-	} else if strings.HasPrefix(path, "http") == true {
-		return "", errors.New("URL Doesn't meet whitelist")
+		return
+	} else if strings.HasPrefix(path, "http") {
+		return "", "", errors.New("URL Doesn't meet whitelist")
 	}
 
-	// FOR IDs
-	idn, _ := strconv.Atoi(path)
-	human := list.QueueID(idn)
-	if human != "" {
-		return human, nil
+	id, err := strconv.Atoi(path)
+	if err != nil {
+		return "", "", errors.New("id not found")
 	}
-
-	return "", errors.New("nothing added. (Invalid ID?)")
+	human, path = search.GetTrackById(id)
+	return
 }
 
 func (list *List) pAdd(path, human string) {
@@ -166,10 +170,7 @@ func (list *List) pAdd(path, human string) {
 }
 
 func (list *List) QueueID(trackID int) (human string) {
-	if trackID > search.MaxID || trackID < 1 {
-		return ""
-	}
-	path, human := search.GetTrackById(trackID)
+	human, path := search.GetTrackById(trackID)
 	if path == "" {
 		return ""
 	}
@@ -178,10 +179,9 @@ func (list *List) QueueID(trackID int) (human string) {
 	return human
 }
 
-func (list *List) queueYT(url, human string) string {
-	// TODO Check with API if video is valid for youtube links
+func (list *List) queueYT(url, human string) bool {
 	list.pAdd(url, human)
-	return human
+	return true // TODO Check with API if video is valid for youtube links
 }
 
 // Count is the amount of songs enqueued on the playlist
