@@ -101,9 +101,11 @@ func getCommandAndArg(msg, name string, isPrivate bool, conf *config.Config) (co
 	for i := offset + 1; i < len(split); i++ {
 		arg += split[i] + " "
 	}
-	arg = strings.TrimSpace(arg)
+	if len(split) == 1 { // Avoid invalid index
+		return "", ""
+	}
 
-	return strings.ToLower(split[offset]), arg
+	return strings.ToLower(split[offset]), strings.TrimSpace(arg)
 }
 
 func play(id string, sender string, isPrivate bool, player *playback.Player) {
