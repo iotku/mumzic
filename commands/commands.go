@@ -101,7 +101,7 @@ func getCommandAndArg(msg, name string, isPrivate bool, conf *config.Config) (co
 	for i := offset + 1; i < len(split); i++ {
 		arg += split[i] + " "
 	}
-	if len(split) == 1 { // Avoid invalid index
+	if len(split) == 1 && offset > 0 { // Avoid invalid index
 		return "", ""
 	}
 
