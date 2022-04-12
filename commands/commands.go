@@ -13,12 +13,24 @@ import (
 )
 
 func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender string) {
-	helper.DebugPrintln("IsPlaying:", player.IsPlaying(), "DoNext:", player.DoNext)
+	helper.DebugPrintln("IsPlaying:", player.IsPlaying(), "DoNext:", "Len:", len(player.Playlist.Playlist), "Count", player.Playlist.Count(), "PlPos:", player.Playlist.Position, "DoNext:", player.DoNext, "HasNext:", player.Playlist.HasNext())
 	command, arg := getCommandAndArg(msg, player.Client.Self.Name, isPrivate, player.Config)
 
 	switch command {
 	case "play", "add":
 		play(arg, sender, isPrivate, player)
+	case "playnow":
+		if player.Playlist.AddNext(arg) {
+			player.Skip(1)
+		} else {
+			helper.MsgDispatch(player.Client, isPrivate, sender, "Not Added: invalid ID or URL") // TODO Standardize error messages
+		}
+	case "playnext", "addnext":
+		if player.Playlist.AddNext(arg) {
+			helper.MsgDispatch(player.Client, isPrivate, sender, "Added: "+player.Playlist.GetNextHuman())
+		} else {
+			helper.MsgDispatch(player.Client, isPrivate, sender, "Not Added: invalid ID or URL") // TODO Standardize error messages
+		}
 	case "stop":
 		player.DoNext = "stop"
 		player.Stop()
@@ -90,7 +102,7 @@ func addSongToQueue(id, sender string, isPrivate bool, player *playback.Player) 
 	return true
 }
 
-func getCommandAndArg(msg, name string, isPrivate bool, conf *config.Config) (command, arg string) {
+func getCommandAndArg(msg, name string, isPrivate bool, conf *config.Config) (command, arg string) { // TODO Add testing.
 	var offset int
 	if strings.HasPrefix(msg, conf.Prefix) {
 		msg = msg[len(conf.Prefix):]

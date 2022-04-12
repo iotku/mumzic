@@ -77,6 +77,17 @@ func (list *List) GetCurrentHuman() string {
 	return list.Playlist[list.Position][1]
 }
 
+func (list *List) GetNextHuman() string {
+	println(list.Position + 1)
+	println(len(list.Playlist))
+	if len(list.Playlist) == 0 {
+		return ""
+	} else if len(list.Playlist) == list.Position+1 {
+		return list.Playlist[list.Position][1]
+	}
+	return list.Playlist[list.Position+1][1]
+}
+
 // GetList returns a list of items from the current to the end of the playlist
 // Note: Older items aren't removed immediately however aren't guaranteed to remain forever.
 func (list *List) GetList(max int) []string {
@@ -143,6 +154,28 @@ func (list *List) AddToQueue(path string) (string, error) {
 	}
 
 	return human, nil
+}
+
+func (list *List) AddNext(arg string) bool {
+	human, path, err := getHumanAndPath(arg)
+	if err != nil {
+		return false
+	}
+	if list.Count() <= 1 || !list.HasNext() {
+		list.pAdd(path, human)
+		return true
+	}
+
+	var newList [][]string
+	newList = append(newList, list.Playlist[list.Position])
+	newList = append(newList, []string{path, human})
+	newList = append(newList, list.Playlist[list.Position+1:]...)
+
+	// Copy New Playlist
+	list.Playlist = newList
+	list.Position = 0
+
+	return true
 }
 
 func getHumanAndPath(arg string) (human, path string, err error) {
