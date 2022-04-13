@@ -158,10 +158,22 @@ func (player *Player) Play(path string) {
 		player.DoNext = "next"
 	}
 
+	nowPlaying := player.NowPlaying()
+	helper.ChanMsg(player.Client, nowPlaying)
+	player.Client.Self.SetComment(nowPlaying)
+	go player.WaitForStop()
+}
+
+func (player *Player) NowPlaying() string {
 	artPath := messages.FindCoverArtPath(player.Playlist.GetCurrentPath())
-	var artImg string
+	var artImg, radioMode string
 	if artPath != "" {
 		artImg = messages.GenerateCoverArtImg(artPath)
+	}
+
+	if player.DoNext == "radio" {
+		radioMode = "<tr><td>Radio Mode: <b>Enabled</b></td></tr><tr>" +
+			"<td>use <b>radio</b> to go back to normal mode</td><tr>"
 	}
 	output := " <h2><u>Now Playing</u></h2><table><tr><td>" +
 		artImg + "</td><td>" +
@@ -169,11 +181,12 @@ func (player *Player) Play(path string) {
 		player.Playlist.GetCurrentHuman() +
 		"</td></tr>" +
 		"<tr><td><b>" + strconv.Itoa(player.Playlist.Count()) +
-		"</b> songs remain</td></tr></table>" +
+		"</b> songs remain</td></tr>" +
+		radioMode +
+		"</table>" +
 		"</td></tr></table>"
-	helper.ChanMsg(player.Client, output)
-	player.Client.Self.SetComment(output)
-	go player.WaitForStop()
+
+	return output
 }
 
 // IsPlaying returns true if the Stream exists and claims to be playing
