@@ -78,8 +78,6 @@ func (list *List) GetCurrentHuman() string {
 }
 
 func (list *List) GetNextHuman() string {
-	println(list.Position + 1)
-	println(len(list.Playlist))
 	if len(list.Playlist) == 0 {
 		return ""
 	} else if len(list.Playlist) == list.Position+1 {

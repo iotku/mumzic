@@ -13,7 +13,7 @@ import (
 )
 
 func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender string) {
-	helper.DebugPrintln("IsPlaying:", player.IsPlaying(), "DoNext:", "Len:", len(player.Playlist.Playlist), "Count", player.Playlist.Count(), "PlPos:", player.Playlist.Position, "DoNext:", player.DoNext, "HasNext:", player.Playlist.HasNext())
+	helper.DebugPrintln("IsPlaying:", player.IsPlaying(), "DoNext:", player.DoNext, "Len:", len(player.Playlist.Playlist), "Count", player.Playlist.Count(), "PlPos:", player.Playlist.Position, "DoNext:", player.DoNext, "HasNext:", player.Playlist.HasNext())
 	command, arg := getCommandAndArg(msg, player.Client.Self.Name, isPrivate, player.Config)
 
 	switch command {
@@ -60,6 +60,16 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 		)
 	case "rand":
 		rand(player, sender, isPrivate, arg)
+	case "radio":
+		if player.DoNext != "radio" {
+			helper.MsgDispatch(player.Client, isPrivate, sender, "Enabled Radio Mode, Shuffling forever.")
+			player.Playlist.AddNext(strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
+			player.DoNext = "radio"
+			player.Skip(1)
+		} else {
+			player.DoNext = "next"
+			helper.MsgDispatch(player.Client, isPrivate, sender, "Disabled Radio Mode.")
+		}
 	case "search", "find":
 		find(player, sender, isPrivate, arg)
 	case "saveconf":

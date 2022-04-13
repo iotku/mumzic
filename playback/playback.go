@@ -11,6 +11,7 @@ import (
 	"github.com/iotku/mumzic/helper"
 	"github.com/iotku/mumzic/messages"
 	"github.com/iotku/mumzic/playlist"
+	"github.com/iotku/mumzic/search"
 	"github.com/iotku/mumzic/youtubedl"
 	"layeh.com/gumble/gumble"
 	"layeh.com/gumble/gumble/MumbleProto"
@@ -129,6 +130,12 @@ func (player *Player) WaitForStop() {
 		} else {
 			player.DoNext = "stop"
 		}
+	case "radio":
+		ids := search.GetRandomTrackIDs(1)
+		if player.Playlist.AddNext(strconv.Itoa(ids[0])) {
+			player.Playlist.Position++
+			player.PlayCurrent()
+		}
 	default:
 	}
 }
@@ -147,7 +154,9 @@ func (player *Player) Play(path string) {
 		helper.ChanMsg(player.Client, "<b style=\"color:red\">Error: </b>"+err.Error())
 		return
 	}
-	player.DoNext = "next"
+	if player.DoNext != "radio" {
+		player.DoNext = "next"
+	}
 
 	artPath := messages.FindCoverArtPath(player.Playlist.GetCurrentPath())
 	var artImg string
@@ -195,11 +204,13 @@ func (player *Player) PlayFile(path string) error {
 }
 
 func (player *Player) Skip(amount int) {
-	if player.Playlist.HasNext() {
+	if player.Playlist.HasNext() && player.DoNext != "radio" {
 		player.DoNext = "stop"
 		player.Playlist.Skip(amount)
 		player.PlayCurrent()
 		player.DoNext = "next"
+	} else if player.DoNext == "radio" {
+		player.Stop()
 	} else {
 		player.DoNext = "stop"
 		player.Stop()
