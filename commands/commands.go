@@ -112,22 +112,21 @@ func addSongToQueue(id, sender string, isPrivate bool, player *playback.Player) 
 	return true
 }
 
-func getCommandAndArg(msg, name string, isPrivate bool, conf *config.Config) (command, arg string) { // TODO Add testing.
-	var offset int
+func getCommandAndArg(msg, name string, isPrivate bool, conf *config.Config) (command, arg string) {
 	if strings.HasPrefix(msg, conf.Prefix) {
 		msg = msg[len(conf.Prefix):]
-	} else if !isPrivate && strings.HasPrefix(msg, name) {
-		offset = 1
-	}
-	split := strings.Split(msg, " ")
-	for i := offset + 1; i < len(split); i++ {
-		arg += split[i] + " "
-	}
-	if len(split) == 1 && offset > 0 { // Avoid invalid index
-		return "", ""
+	} else if strings.HasPrefix(msg, name) {
+		msg = strings.TrimSpace(msg[len(name):])
 	}
 
-	return strings.ToLower(split[offset]), strings.TrimSpace(arg)
+	split := strings.Split(msg, " ")
+	for i := 1; i < len(split); i++ {
+		arg += split[i] + " "
+	}
+	if strings.HasPrefix(msg, name) && len(split) == 1 {
+		return "", ""
+	}
+	return strings.ToLower(split[0]), strings.TrimSpace(arg)
 }
 
 func play(id string, sender string, isPrivate bool, player *playback.Player) {
