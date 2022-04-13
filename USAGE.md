@@ -9,19 +9,23 @@ Note: PMing the bot currently doesn't have the prefix for commands, so **!summon
 | !summon | Bot joins sender's channel| PM the bot if you are not in the same channel | 
 
 ### Playback
-| Command           | Info                                  | Notes                                                                     |
-|-------------------|---------------------------------------|---------------------------------------------------------------------------|
-| play [id or URL] | Play track via ID                     | Numberic IDs (found with !search) or Youtube/Soundcloud URL               |
-| rand [#]         | Add Random Tracks                     | Random track(s) from filesystem                                           |
-| stop             | Stop playing track                    | If you use !play with no arguments; will restart track from beginning     |
-| skip [#]         | skip # amount of tracks               | Default 1                                                                 |
+| Command                      | Info                                               | Notes                                                                 |
+|------------------------------|----------------------------------------------------|-----------------------------------------------------------------------|
+| play/add [ID or URL]         | Play track via ID or URL                           | Numberic IDs (found with !search) or Youtube/Soundcloud URL           |
+| random/rand [#]              | Add Random Tracks                                  | Random track(s) from filesystem                                       |
+| stop                         | Stop playing track                                 | If you use !play with no arguments; will restart track from beginning |
+| skip/next [#]                | skip # amount of tracks                            | Default 1                                                             |
+| playnow  [ID or URL]         | Play provided ID or URL immediately                |                                                                       |
+| playnext/addnext [ID or URL] | Add the provided ID or URL after the current track |                                                                       |
 
 
 ### Playlist
-| Command          | Info                                  | Notes                                                                     |
-|------------------|---------------------------------------|---------------------------------------------------------------------------|
-| list             | Show current track list               |                                                                           |
-| search           | Find tracks from local files          |                                                                           |
+| Command                               | Info                                     | Notes |
+|---------------------------------------|------------------------------------------|-------|
+| list                                  | Show current track list                  |       |
+| search/find [Arist Name / Track Name] | Find tracks from local files             |       |
+| more                                  | Show additional results from list/search |       |
+| less                                  | Show previous results from list/search   |       |
 
 ### Audio
 | Command          | Info                                  | Notes                                                                     |

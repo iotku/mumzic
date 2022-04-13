@@ -58,7 +58,7 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 			sender,
 			"https://github.com/iotku/mumzic/blob/master/USAGE.md",
 		)
-	case "rand":
+	case "rand", "random":
 		rand(player, sender, isPrivate, arg)
 	case "radio":
 		if player.DoNext != "radio" {

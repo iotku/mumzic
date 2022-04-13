@@ -130,7 +130,7 @@ func (player *Player) WaitForStop() {
 		} else {
 			player.DoNext = "stop"
 		}
-	case "radio":
+	case "radio": // TODO: make radio mode clear old playlist entries to save memory
 		ids := search.GetRandomTrackIDs(1)
 		if player.Playlist.AddNext(strconv.Itoa(ids[0])) {
 			player.Playlist.Position++
@@ -173,7 +173,7 @@ func (player *Player) NowPlaying() string {
 
 	if player.DoNext == "radio" {
 		radioMode = "<tr><td>Radio Mode: <b>Enabled</b></td></tr><tr>" +
-			"<td>use <b>radio</b> to go back to normal mode</td><tr>"
+			"<td>Use <b>radio</b> to go back to normal mode</td><tr>"
 	}
 	output := " <h2><u>Now Playing</u></h2><table><tr><td>" +
 		artImg + "</td><td>" +
@@ -181,7 +181,7 @@ func (player *Player) NowPlaying() string {
 		player.Playlist.GetCurrentHuman() +
 		"</td></tr>" +
 		"<tr><td><b>" + strconv.Itoa(player.Playlist.Count()) +
-		"</b> songs remain</td></tr>" +
+		"</b> songs queued</td></tr>" +
 		radioMode +
 		"</table>" +
 		"</td></tr></table>"
