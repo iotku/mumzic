@@ -28,13 +28,8 @@ type MessageTable struct {
 	cols  int
 }
 
-var messageBuffers map[string][]string
-var messageOffsets map[string]int
-
-func init() {
-	messageBuffers = make(map[string][]string)
-	messageOffsets = make(map[string]int)
-}
+var messageBuffers = make(map[string][]string)
+var messageOffsets = make(map[string]int)
 
 func ResetMore(sender string) {
 	messageBuffers[sender] = nil

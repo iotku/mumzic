@@ -122,7 +122,7 @@ func (player *Player) WaitForStop() {
 	player.stream.Wait()
 	switch player.DoNext {
 	case "stop":
-		player.Client.Self.SetComment("Not Playing.")
+		helper.SetComment(player.Client, "Not Playing.")
 	case "next":
 		if player.Playlist.HasNext() {
 			player.Playlist.Next()
@@ -154,13 +154,14 @@ func (player *Player) Play(path string) {
 		helper.ChanMsg(player.Client, "<b style=\"color:red\">Error: </b>"+err.Error())
 		return
 	}
+
 	if player.DoNext != "radio" {
 		player.DoNext = "next"
 	}
 
 	nowPlaying := player.NowPlaying()
 	helper.ChanMsg(player.Client, nowPlaying)
-	player.Client.Self.SetComment(nowPlaying)
+	helper.SetComment(player.Client, nowPlaying)
 	go player.WaitForStop()
 }
 
@@ -218,7 +219,7 @@ func (player *Player) PlayFile(path string) error {
 
 func (player *Player) Skip(amount int) {
 	if player.Playlist.HasNext() && player.DoNext != "radio" {
-		player.DoNext = "stop"
+		player.DoNext = "skip"
 		player.Playlist.Skip(amount)
 		player.PlayCurrent()
 		player.DoNext = "next"

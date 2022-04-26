@@ -15,17 +15,15 @@ type msgBundle struct {
 }
 
 // Message rate limiting
-var msgBurstCount uint
+var msgBurstCount uint = 0
 var msgLastSentTime time.Time
-var msgChan chan (msgBundle)
+var msgChan = make(chan msgBundle)
 
 // How long to wait when throttling
 const waitDuration = 1*time.Second + 120*time.Millisecond
 
 func init() {
-	msgBurstCount = 0
 	msgLastSentTime = time.Now()
-	msgChan = make(chan msgBundle)
 	go watchMsgChan()
 }
 
@@ -46,13 +44,15 @@ func watchMsgChan() {
 		}
 		msgBurstCount++
 
-		if msgBurstCount >= 3 {
+		if msgBurstCount >= 5 {
 			time.Sleep(waitDuration)
 		}
 
 		// Actually send message to mumble server
 		if bundle.username == "" {
 			bundle.client.Self.Channel.Send(bundle.msg, false)
+		} else if bundle.username == bundle.client.Self.Name { // set comment for self
+			bundle.client.Self.SetComment(bundle.msg)
 		} else {
 			gumbleUser := bundle.client.Users.Find(bundle.username)
 			if gumbleUser == nil { // User not found.
@@ -79,6 +79,11 @@ func ChanMsg(client *gumble.Client, msg string) {
 // UserMsg sends msg directly to user by username supplied
 func UserMsg(client *gumble.Client, username string, msg string) {
 	msgChan <- msgBundle{client, username, msg}
+}
+
+// SetComment sets the comment for itself
+func SetComment(client *gumble.Client, comment string) {
+	msgChan <- msgBundle{client, client.Self.Name, comment}
 }
 
 // MsgDispatch will send to either UserMsg or ChanMsg depending on if message is private or not.
