@@ -12,6 +12,10 @@ import (
 	"github.com/iotku/mumzic/search"
 )
 
+func IsCommand(message string, isPrivate bool, config *config.Config) bool {
+	return strings.HasPrefix(message, config.Prefix) || strings.HasPrefix(message, config.Username) || isPrivate
+}
+
 func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender string) {
 	helper.DebugPrintln("IsPlaying:", player.IsPlaying(), "DoNext:", player.DoNext, "Len:", len(player.Playlist.Playlist), "Count", player.Playlist.Count(), "PlPos:", player.Playlist.Position, "DoNext:", player.DoNext, "HasNext:", player.Playlist.HasNext())
 	command, arg := getCommandAndArg(msg, player.Client.Self.Name, isPrivate, player.Config)

@@ -2,10 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
-	"os"
-	"strings"
 
 	"github.com/iotku/mumzic/commands"
 	"github.com/iotku/mumzic/config"
@@ -17,30 +14,18 @@ import (
 )
 
 func main() {
-	flag.Usage = func() {
-		fmt.Printf("Usage of %s: [flags]\n", os.Args[0])
-		flag.PrintDefaults()
-	}
-
 	var channelPlayer *playback.Player
 	var bConfig *config.Config
 	gumbleutil.Main(gumbleutil.AutoBitrate, gumbleutil.Listener{
 		Connect: func(e *gumble.ConnectEvent) {
-			if hostName := flag.Lookup("server").Value; hostName == nil {
-				bConfig = config.NewConfig("unknown")
-			} else {
-				bConfig = config.NewConfig(hostName.String())
-			}
-			if bConfig.Channel != "" && e.Client.Channels.Find(bConfig.Channel) != nil {
-				fmt.Println("Joining ", bConfig.Channel)
+			bConfig = config.NewConfig(getValueFromFlag(flag.Lookup("server")))
+			if e.Client.Channels.Find(bConfig.Channel) != nil {
 				e.Client.Self.Move(e.Client.Channels.Find(bConfig.Channel))
-			} else {
-				fmt.Println("Not Joining", bConfig.Channel)
 			}
 
 			channelPlayer = playback.NewPlayer(e.Client, bConfig)
 			channelPlayer.Playlist.Load(bConfig.Hostname)
-			fmt.Printf("audio player loaded! (%d files)\n", search.MaxID)
+			log.Printf("audio player loaded! (%d files)\n", search.MaxID)
 		},
 		TextMessage: func(e *gumble.TextMessageEvent) {
 			if e.Sender == nil {
@@ -50,7 +35,7 @@ func main() {
 			isPrivate := len(e.TextMessage.Channels) == 0 // If no channels, is private message
 			logMessage(e, isPrivate)
 
-			if isCommand(e, isPrivate, bConfig) {
+			if commands.IsCommand(e.Message, isPrivate, bConfig) {
 				go commands.CommandDispatch(channelPlayer, e.Message, isPrivate, e.Sender.Name)
 			}
 		},
@@ -63,7 +48,7 @@ func main() {
 			}
 		},
 		Disconnect: func(e *gumble.DisconnectEvent) {
-			fmt.Println("Disconnecting: ", e.Type)
+			log.Println("Disconnecting: ", e.Type)
 			bConfig.Save()
 			channelPlayer.Playlist.Save(bConfig.Hostname)
 			config.CloseDatabase()
@@ -79,6 +64,10 @@ func logMessage(e *gumble.TextMessageEvent, isPrivate bool) {
 	}
 }
 
-func isCommand(e *gumble.TextMessageEvent, isPrivate bool, config *config.Config) bool {
-	return strings.HasPrefix(e.Message, config.Prefix) || strings.HasPrefix(e.Message, e.Client.Self.Name) || isPrivate
+func getValueFromFlag(lookup *flag.Flag) string {
+	if lookup == nil {
+		return "unknown"
+	}
+
+	return lookup.Value.String()
 }
