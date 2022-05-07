@@ -24,16 +24,12 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 	case "play", "add":
 		play(arg, sender, isPrivate, player)
 	case "playnow":
-		if player.Playlist.AddNext(arg) {
-			player.Skip(1)
-		} else {
-			helper.MsgDispatch(player.Client, isPrivate, sender, "Not Added: invalid ID or URL") // TODO Standardize error messages
-		}
+		playnow(player, sender, isPrivate, arg)
 	case "playnext", "addnext":
 		if player.Playlist.AddNext(arg) {
 			helper.MsgDispatch(player.Client, isPrivate, sender, "Added: "+player.Playlist.GetNextHuman())
 		} else {
-			helper.MsgDispatch(player.Client, isPrivate, sender, "Not Added: invalid ID or URL") // TODO Standardize error messages
+			helper.MsgDispatch(player.Client, isPrivate, sender, "Not Added: invalid ID or URL") // TODO: Standardize error messages
 		}
 	case "stop":
 		player.DoNext = "stop"
@@ -56,24 +52,12 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 	case "untarget":
 		player.RemoveTarget(sender)
 	case "help":
-		helper.MsgDispatch(
-			player.Client,
-			isPrivate,
-			sender,
-			"https://github.com/iotku/mumzic/blob/master/USAGE.md",
-		)
+		helper.MsgDispatch(player.Client, isPrivate, sender,
+			"https://github.com/iotku/mumzic/blob/master/USAGE.md")
 	case "rand", "random":
 		rand(player, sender, isPrivate, arg)
 	case "radio":
-		if player.DoNext != "radio" {
-			helper.MsgDispatch(player.Client, isPrivate, sender, "Enabled Radio Mode, Shuffling forever.")
-			player.Playlist.AddNext(strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
-			player.DoNext = "radio"
-			player.Skip(1)
-		} else {
-			player.DoNext = "next"
-			helper.MsgDispatch(player.Client, isPrivate, sender, "Disabled Radio Mode.")
-		}
+		toggleRadio(player, sender, isPrivate)
 	case "search", "find":
 		find(player, sender, isPrivate, arg)
 	case "saveconf":
@@ -85,9 +69,29 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 	case "summon":
 		joinUserChannel(player, sender)
 	case "uinfo":
-		info := player.Client.Self.Hash
-		println(info)
-		helper.MsgDispatch(player.Client, isPrivate, sender, info)
+		helper.MsgDispatch(player.Client, isPrivate, sender, player.Client.Self.Hash)
+	}
+}
+
+func playnow(player *playback.Player, sender string, isPrivate bool, track string) {
+	if player.Playlist.AddNext(track) {
+		player.Skip(1)
+		if player.IsStopped() && !player.Playlist.IsEmpty() {
+			player.PlayCurrent()
+		}
+	} else {
+		helper.MsgDispatch(player.Client, isPrivate, sender, "Not Added: invalid ID or URL") // TODO: Standardize error messages
+	}
+}
+
+func toggleRadio(player *playback.Player, sender string, isPrivate bool) {
+	if !player.IsRadio {
+		player.IsRadio = true
+		helper.MsgDispatch(player.Client, isPrivate, sender, "Enabled Radio Mode, Shuffling forever.")
+		playnow(player, sender, isPrivate, strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
+	} else {
+		player.IsRadio = false
+		helper.MsgDispatch(player.Client, isPrivate, sender, "Disabled Radio Mode.")
 	}
 }
 

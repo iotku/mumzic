@@ -26,6 +26,7 @@ type Player struct {
 	Playlist playlist.List
 	Volume   float32
 	DoNext   string
+	IsRadio  bool
 	Config   *config.Config
 }
 
@@ -37,7 +38,6 @@ func (player *Player) AddTarget(username string) {
 	for _, v := range player.targets {
 		if v.UserID == user.UserID {
 			player.RemoveTarget(v.Name)
-			println("Retargeted: ", username)
 			break
 		}
 	}
@@ -61,7 +61,6 @@ func (player *Player) TargetUsers() {
 		player.Client.VoiceTarget = nil
 		return
 	}
-	println("Target usrs and chan")
 	player.Client.VoiceTarget = &gumble.VoiceTarget{ID: uint32(2)}
 	ownChannel := player.Client.Self.Channel
 	player.Client.VoiceTarget.AddChannel(ownChannel, false, false, "radio")
@@ -95,9 +94,10 @@ func NewPlayer(client *gumble.Client, config *config.Config) *Player {
 			Playlist: make([][]string, 0),
 			Position: 0,
 		},
-		Volume: config.Volume,
-		DoNext: "stop", // stop, next
-		Config: config,
+		Volume:  config.Volume,
+		IsRadio: false,
+		DoNext:  "stop", // stop, next
+		Config:  config,
 	}
 }
 
@@ -120,6 +120,14 @@ func (player *Player) WaitForStop() {
 		return
 	}
 	player.stream.Wait()
+	if player.IsRadio && player.DoNext != "stop" {
+		if player.Playlist.AddNext(strconv.Itoa(search.GetRandomTrackIDs(1)[0])) {
+			player.Playlist.Position++
+			player.PlayCurrent()
+		}
+		return
+	}
+
 	switch player.DoNext {
 	case "stop":
 		helper.SetComment(player.Client, "Not Playing.")
@@ -130,12 +138,6 @@ func (player *Player) WaitForStop() {
 		} else {
 			player.DoNext = "stop"
 		}
-	case "radio": // TODO: make radio mode clear old playlist entries to save memory
-		ids := search.GetRandomTrackIDs(1)
-		if player.Playlist.AddNext(strconv.Itoa(ids[0])) {
-			player.Playlist.Position++
-			player.PlayCurrent()
-		}
 	default:
 	}
 }
@@ -145,7 +147,7 @@ func (player *Player) Play(path string) {
 	path = helper.StripHTMLTags(path)
 	var err error
 	if strings.HasPrefix(path, "http") {
-		player.PlayYT(path)
+		err = player.PlayYT(path)
 	} else {
 		err = player.PlayFile(path)
 	}
@@ -155,9 +157,7 @@ func (player *Player) Play(path string) {
 		return
 	}
 
-	if player.DoNext != "radio" {
-		player.DoNext = "next"
-	}
+	player.DoNext = "next"
 
 	nowPlaying := player.NowPlaying()
 	helper.ChanMsg(player.Client, nowPlaying)
@@ -172,7 +172,7 @@ func (player *Player) NowPlaying() string {
 		artImg = messages.GenerateCoverArtImg(artPath)
 	}
 
-	if player.DoNext == "radio" {
+	if player.IsRadio {
 		radioMode = "<tr><td>Radio Mode: <b>Enabled</b></td></tr><tr>" +
 			"<td>Use <b>radio</b> to go back to normal mode</td><tr>"
 	}
@@ -208,22 +208,17 @@ func (player *Player) PlayFile(path string) error {
 	}
 	player.stream = gumbleffmpeg.New(player.Client, gumbleffmpeg.SourceFile(path))
 	player.stream.Volume = player.Volume
-
-	if err := player.stream.Play(); err != nil {
-		helper.DebugPrintln(err)
-	} else {
-		helper.DebugPrintln("Playing:", path)
-	}
-	return nil
+	err := player.stream.Play()
+	return err
 }
 
 func (player *Player) Skip(amount int) {
-	if player.Playlist.HasNext() && player.DoNext != "radio" {
+	if player.Playlist.HasNext() && !player.IsRadio {
 		player.DoNext = "skip"
 		player.Playlist.Skip(amount)
 		player.PlayCurrent()
 		player.DoNext = "next"
-	} else if player.DoNext == "radio" {
+	} else if player.IsRadio {
 		player.Stop()
 	} else {
 		player.DoNext = "stop"
@@ -232,21 +227,16 @@ func (player *Player) Skip(amount int) {
 }
 
 // PlayYT streams a URL through ytdl
-func (player *Player) PlayYT(url string) {
+func (player *Player) PlayYT(url string) error {
 	url = helper.StripHTMLTags(url)
 	if !youtubedl.IsWhiteListedURL(url) {
-		log.Printf("PlayYT Failed: URL %s Doesn't meet whitelist", url)
-		return
+		return errors.New("URL Doesn't Meet whitelist")
 	}
 
 	player.stream = gumbleffmpeg.New(player.Client, youtubedl.GetYtdlSource(url))
 	player.stream.Volume = player.Volume
-
-	if err := player.stream.Play(); err != nil {
-		helper.DebugPrintln(err)
-	} else {
-		helper.DebugPrintln("Playing:", url)
-	}
+	err := player.stream.Play()
+	return err
 }
 
 func (player *Player) SetVolume(value float32) {

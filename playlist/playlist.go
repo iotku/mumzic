@@ -141,7 +141,9 @@ func (list *List) IsEmpty() bool {
 // title and err is nil. On failure (ID not found or not whitelisted URL) returns empty string "" and a respective error.
 func (list *List) AddToQueue(path string) (string, error) {
 	human, path, err := getHumanAndPath(path) // Note: we check for whitelist urls here
-	if err != nil || path == "" {
+	if err != nil {
+		return "", err
+	} else if err != nil || path == "" {
 		return "", errors.New("nothing added. (Invalid ID?)")
 	}
 
