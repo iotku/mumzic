@@ -109,15 +109,13 @@ func joinUserChannel(player *playback.Player, sender string) {
 	}
 }
 
-func addSongToQueue(id, sender string, isPrivate bool, player *playback.Player) bool {
-	queued, err := player.Playlist.AddToQueue(id)
+func addSongToQueue(player *playback.Player, id string) (string, error) {
+	human, err := player.Playlist.AddToQueue(id)
 	if err != nil {
-		helper.MsgDispatch(player.Client, isPrivate, sender, "Error: "+err.Error())
-		return false
+		return "", err
 	}
 
-	helper.MsgDispatch(player.Client, isPrivate, sender, "Queued: "+queued)
-	return true
+	return human, nil
 }
 
 func getCommandAndArg(msg, name string, isPrivate bool, conf *config.Config) (command, arg string) {
@@ -138,19 +136,38 @@ func getCommandAndArg(msg, name string, isPrivate bool, conf *config.Config) (co
 }
 
 func play(id string, sender string, isPrivate bool, player *playback.Player) {
-	if id != "" && player.IsStopped() { // Has argument
-		if player.Playlist.IsEmpty() && addSongToQueue(id, sender, isPrivate, player) {
+	var err error
+	var human string
+	if player.IsPlaying() {
+		if id == "" {
+			return
+		}
+		human, err = addSongToQueue(player, id)
+	} else {
+		if id == "" && !player.Playlist.IsEmpty() {
 			player.PlayCurrent()
-		} else if !player.Playlist.HasNext() && addSongToQueue(id, sender, isPrivate, player) {
+			return
+		} else if id == "" && player.Playlist.IsEmpty() {
+			return
+		}
+		var playNext bool
+		if !player.Playlist.IsEmpty() && !player.Playlist.HasNext() {
+			playNext = true
+		}
+		human, err = addSongToQueue(player, id)
+		if playNext && err == nil {
 			player.Skip(1)
-		} else if player.Playlist.HasNext() && addSongToQueue(id, sender, isPrivate, player) {
+		} else if err == nil {
 			player.PlayCurrent()
 		}
-	} else if id != "" && !player.IsStopped() && addSongToQueue(id, sender, isPrivate, player) {
-	} // Just add to queue if playing
+	}
+	if err != nil {
+		helper.MsgDispatch(player.Client, isPrivate, sender, err.Error())
+		return
+	}
 
-	if !player.Playlist.IsEmpty() && player.IsStopped() { // Recover from stopped player.
-		player.PlayCurrent()
+	if human != "" {
+		helper.MsgDispatch(player.Client, isPrivate, sender, "Queued: "+human)
 	}
 }
 
