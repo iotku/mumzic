@@ -75,10 +75,15 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 
 func playnow(player *playback.Player, sender string, isPrivate bool, track string) {
 	if player.Playlist.AddNext(track) {
-		player.Skip(1)
-		if player.IsStopped() && !player.Playlist.IsEmpty() {
+		if player.IsStopped() && !player.Playlist.HasNext() && !player.Playlist.IsEmpty() {
 			player.PlayCurrent()
-		}
+			return
+		} else if player.IsStopped() && player.Playlist.HasNext() {
+            player.Skip(1)
+            player.PlayCurrent()
+            return
+        }
+		player.Skip(1)
 	} else {
 		helper.MsgDispatch(player.Client, isPrivate, sender, "Not Added: invalid ID or URL") // TODO: Standardize error messages
 	}
@@ -88,7 +93,9 @@ func toggleRadio(player *playback.Player, sender string, isPrivate bool) {
 	if !player.IsRadio {
 		player.IsRadio = true
 		helper.MsgDispatch(player.Client, isPrivate, sender, "Enabled Radio Mode, Shuffling forever.")
-		playnow(player, sender, isPrivate, strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
+		if !player.IsPlaying() {
+			playnow(player, sender, isPrivate, strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
+		}
 	} else {
 		player.IsRadio = false
 		helper.MsgDispatch(player.Client, isPrivate, sender, "Disabled Radio Mode.")

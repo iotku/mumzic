@@ -116,13 +116,13 @@ func (player *Player) PlayCurrent() {
 
 // WaitForStop waits for the playback stream to end and performs the upcoming action
 func (player *Player) WaitForStop() {
-	if player.stream == nil {
+	if player.stream == nil || !player.IsPlaying() {
 		return
 	}
 	player.stream.Wait()
 	if player.IsRadio && player.DoNext != "stop" {
 		if player.Playlist.AddNext(strconv.Itoa(search.GetRandomTrackIDs(1)[0])) {
-			player.Playlist.Position++
+			player.Playlist.Next()
 			player.PlayCurrent()
 		}
 		return
@@ -162,7 +162,7 @@ func (player *Player) Play(path string) {
 	nowPlaying := player.NowPlaying()
 	helper.ChanMsg(player.Client, nowPlaying)
 	helper.SetComment(player.Client, nowPlaying)
-	go player.WaitForStop()
+	player.WaitForStop()
 }
 
 func (player *Player) NowPlaying() string {
@@ -196,7 +196,7 @@ func (player *Player) IsPlaying() bool {
 }
 
 func (player *Player) Stop() {
-	if player.IsPlaying() {
+	if player.stream != nil {
 		player.stream.Stop() //#nosec G104 -- Only error this will respond with is stream not playing.
 	}
 }
@@ -206,6 +206,7 @@ func (player *Player) PlayFile(path string) error {
 		log.Println("[Error] file not found:", path)
 		return errors.New("not found")
 	}
+
 	player.stream = gumbleffmpeg.New(player.Client, gumbleffmpeg.SourceFile(path))
 	player.stream.Volume = player.Volume
 	err := player.stream.Play()
