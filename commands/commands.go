@@ -79,10 +79,10 @@ func playnow(player *playback.Player, sender string, isPrivate bool, track strin
 			player.PlayCurrent()
 			return
 		} else if player.IsStopped() && player.Playlist.HasNext() {
-            player.Skip(1)
-            player.PlayCurrent()
-            return
-        }
+			player.Skip(1)
+			player.PlayCurrent()
+			return
+		}
 		player.Skip(1)
 	} else {
 		helper.MsgDispatch(player.Client, isPrivate, sender, "Not Added: invalid ID or URL") // TODO: Standardize error messages
@@ -106,12 +106,16 @@ func joinUserChannel(player *playback.Player, sender string) {
 	client := player.Client
 	user := client.Users.Find(sender)
 	if user == nil {
-		return // user not found
+		return
 	}
-	channel := client.Channels.Find(user.Channel.Name)
 
-	client.Self.Move(channel)
-	if client.Self.Channel.Name == channel.Name {
+	chanTarget := user.Channel
+	if chanTarget == nil {
+		return
+	}
+
+	client.Self.Move(chanTarget)
+	if client.Self.Channel == chanTarget {
 		player.TargetUsers()
 	}
 }
