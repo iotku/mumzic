@@ -24,7 +24,7 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 	case "play", "add":
 		play(arg, sender, isPrivate, player)
 	case "playnow":
-		playnow(player, sender, isPrivate, arg)
+		playNow(player, sender, isPrivate, arg)
 	case "playnext", "addnext":
 		if player.Playlist.AddNext(arg) {
 			helper.MsgDispatch(player.Client, isPrivate, sender, "Added: "+player.Playlist.GetNextHuman())
@@ -73,7 +73,10 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 	}
 }
 
-func playnow(player *playback.Player, sender string, isPrivate bool, track string) {
+func playNow(player *playback.Player, sender string, isPrivate bool, track string) {
+	if player.IsRadio {
+		toggleRadio(player, sender, isPrivate)
+	}
 	if player.Playlist.AddNext(track) {
 		if player.IsStopped() && !player.Playlist.HasNext() && !player.Playlist.IsEmpty() {
 			player.PlayCurrent()
@@ -94,7 +97,7 @@ func toggleRadio(player *playback.Player, sender string, isPrivate bool) {
 		player.IsRadio = true
 		helper.MsgDispatch(player.Client, isPrivate, sender, "Enabled Radio Mode, Shuffling forever.")
 		if !player.IsPlaying() {
-			playnow(player, sender, isPrivate, strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
+			playNow(player, sender, isPrivate, strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
 		}
 	} else {
 		player.IsRadio = false
