@@ -14,11 +14,7 @@ import (
 var MaxID int
 
 func init() {
-	if _, err := os.Stat(config.SongDB); os.IsNotExist(err) {
-		MaxID = 0 // No media.db
-	} else {
-		MaxID = getMaxID(config.SongDB)
-	}
+	MaxID = getMaxID(config.SongDB)
 }
 
 // Aggressively fail on error
@@ -28,8 +24,11 @@ func checkErrPanic(err error) {
 	}
 }
 
-// Query SQLite database to count maximum amount of rows, as to not point to non existent ID
+// Query SQLite database to count maximum amount of rows, as to not point to non-existent ID
 func getMaxID(database string) int {
+	if _, err := os.Stat(config.SongDB); os.IsNotExist(err) {
+		return 0
+	}
 	db, err := sql.Open("sqlite3", database)
 	defer db.Close()
 	checkErrPanic(err)
