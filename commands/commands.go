@@ -134,7 +134,7 @@ func getCommandAndArg(msg, name string, isPrivate bool, conf *config.Config) (co
 	if strings.HasPrefix(msg, conf.Prefix) {
 		msg = msg[len(conf.Prefix):]
 	} else if strings.HasPrefix(msg, name) {
-		msg = msg[len(name):]
+		msg = strings.TrimSpace(msg[len(name):])
 	}
 
 	split := strings.Split(msg, " ")
