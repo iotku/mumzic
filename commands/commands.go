@@ -94,11 +94,11 @@ func playNow(player *playback.Player, sender string, isPrivate bool, track strin
 
 func toggleRadio(player *playback.Player, sender string, isPrivate bool) {
 	if !player.IsRadio {
-		player.IsRadio = true
 		helper.MsgDispatch(player.Client, isPrivate, sender, "Enabled Radio Mode, Shuffling forever.")
 		if !player.IsPlaying() {
 			playNow(player, sender, isPrivate, strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
 		}
+		player.IsRadio = true
 	} else {
 		player.IsRadio = false
 		helper.MsgDispatch(player.Client, isPrivate, sender, "Disabled Radio Mode.")
@@ -108,14 +108,11 @@ func toggleRadio(player *playback.Player, sender string, isPrivate bool) {
 func joinUserChannel(player *playback.Player, sender string) {
 	client := player.Client
 	user := client.Users.Find(sender)
-	if user == nil {
+	if user == nil || user.Channel == nil {
 		return
 	}
 
 	chanTarget := user.Channel
-	if chanTarget == nil {
-		return
-	}
 
 	client.Self.Move(chanTarget)
 	if client.Self.Channel == chanTarget {
