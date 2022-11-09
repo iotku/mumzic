@@ -198,7 +198,7 @@ func (player *Player) IsPlaying() bool {
 func (player *Player) Stop() {
 	if player.stream != nil {
 		player.stream.Stop() //#nosec G104 -- Only error this will respond with is stream not playing.
-	}
+	} // TODO: Maybe I should verify the stream has actually stopped before returning?
 }
 
 func (player *Player) PlayFile(path string) error {

@@ -19,8 +19,8 @@ import (
 
 // Default Message size limits for Murmur
 const (
-	MAX_MESSAGE_LENGTH_WITH_IMAGE    = 131072
-	MAX_MESSAGE_LENGTH_WITHOUT_IMAGE = 5000
+	MaxMessageLengthWithImage    = 131072
+	MaxMessageLengthWithoutImage = 5000
 )
 
 type MessageTable struct {
@@ -41,7 +41,7 @@ func SendMore(sender, text string) {
 }
 
 // SaveMoreRows adds the first rows limited by config.MaxLines to the provided
-// table and then saves the additional rows into the more buffer
+// table and then saves the additional rows into the 'more' buffer
 func SaveMoreRows(sender string, rows []string, table MessageTable) int {
 	ResetMore(sender)
 	var i int
@@ -168,6 +168,7 @@ func FindCoverArtPath(playPath string) string {
 // TODO: Find a way to get generated cover art to follow the larger limits (for messages that contain images)
 //       for now, we make sure the image is less than maxSize to be well below the 5000 text limit the mumble server
 //       imposes by default for text messages (that contain no image)
+// TODO: Option to override limits for servers with modified settings
 func GenerateCoverArtImg(path string) string {
 	img, err := decodeImage(path)
 	if err != nil {
@@ -190,7 +191,7 @@ func GenerateCoverArtImg(path string) string {
 		maxSize = len(encodedStr)
 		jpegQuality -= 10 // Lower potential future jpegQuality if there's further passes
 	}
-	if len(encodedStr) > MAX_MESSAGE_LENGTH_WITHOUT_IMAGE-150 {
+	if len(encodedStr) > MaxMessageLengthWithoutImage-150 {
 		return "" // Don't return album art, it's certainly too big!
 	}
 	return encodedStr
