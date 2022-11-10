@@ -13,6 +13,7 @@ import (
 )
 
 func IsCommand(message string, isPrivate bool, config *config.Config) bool {
+	message = strings.TrimSpace(message)
 	return strings.HasPrefix(message, config.Prefix) || strings.HasPrefix(message, config.Username) || isPrivate
 }
 
