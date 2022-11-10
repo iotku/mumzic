@@ -108,6 +108,11 @@ func (player *Player) IsStopped() bool {
 	return false
 }
 
+// IsPlaying returns true if the Stream exists and claims to be playing
+func (player *Player) IsPlaying() bool {
+	return player.stream != nil && player.stream.State() == gumbleffmpeg.StatePlaying
+}
+
 func (player *Player) PlayCurrent() {
 	if !player.Playlist.IsEmpty() {
 		player.Play(player.Playlist.GetCurrentPath())
@@ -116,7 +121,7 @@ func (player *Player) PlayCurrent() {
 
 // WaitForStop waits for the playback stream to end and performs the upcoming action
 func (player *Player) WaitForStop() {
-	if player.stream == nil || !player.IsPlaying() {
+	if player.IsStopped() {
 		return
 	}
 	player.stream.Wait()
@@ -190,15 +195,16 @@ func (player *Player) NowPlaying() string {
 	return output
 }
 
-// IsPlaying returns true if the Stream exists and claims to be playing
-func (player *Player) IsPlaying() bool {
-	return player.stream != nil && player.stream.State() == gumbleffmpeg.StatePlaying
-}
-
 func (player *Player) Stop() {
-	if player.stream != nil {
+	if player.IsPlaying() {
 		player.stream.Stop() //#nosec G104 -- Only error this will respond with is stream not playing.
-	} // TODO: Maybe I should verify the stream has actually stopped before returning?
+		player.stream.Wait() // This may help alleviate issues as descried below
+		if player.IsPlaying() {
+			// There have been some occasions where another stream begins and turns into a garbled
+			// mess. Hopefully at some point we'll catch it and determine if it's our fault.
+			log.Println("WARNING: Racey stop condition, should have stopped but didn't?.")
+		}
+	}
 }
 
 func (player *Player) PlayFile(path string) error {
