@@ -192,7 +192,7 @@ func (player *Player) Stop(wantsToStop bool) {
 	if player.IsPlaying() {
 		player.stream.Stop() //#nosec G104 -- Only error this will respond with is stream not playing.
 		player.stream.Wait() // This may help alleviate issues as descried below
-		if player.IsPlaying() {
+		if player.IsPlaying() && player.wantsToStop {
 			// There have been some occasions where another stream begins and turns into a garbled
 			// mess. Hopefully at some point we'll catch it and determine if it's our fault.
 			log.Println("WARNING: Racey stop condition, should have stopped but didn't?.")
@@ -213,6 +213,7 @@ func (player *Player) PlayFile(path string) error {
 }
 
 func (player *Player) Skip(amount int) {
+	player.Stop(true)
 	if player.Playlist.HasNext() && !player.IsRadio {
 		player.Playlist.Skip(amount)
 		player.PlayCurrent()
