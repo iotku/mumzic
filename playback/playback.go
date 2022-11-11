@@ -101,11 +101,9 @@ func NewPlayer(client *gumble.Client, config *config.Config) *Player {
 	}
 }
 
+// IsStopped returns true if the Stream exists and claims to be stopped
 func (player *Player) IsStopped() bool {
-	if player.stream == nil || player.stream.State() == gumbleffmpeg.StateStopped {
-		return true
-	}
-	return false
+	return player.stream == nil || player.stream.State() == gumbleffmpeg.StateStopped
 }
 
 // IsPlaying returns true if the Stream exists and claims to be playing
