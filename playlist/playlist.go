@@ -195,6 +195,9 @@ func getHumanAndPath(arg string) (human, path string, err error) {
 		return "", "", errors.New("id not found")
 	}
 	human, path = search.GetTrackById(id)
+	if path == "" {
+		return "", "", errors.New("id not found")
+	}
 	return
 }
 
