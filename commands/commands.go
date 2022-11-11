@@ -18,7 +18,7 @@ func IsCommand(message string, isPrivate bool, config *config.Config) bool {
 }
 
 func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender string) {
-	helper.DebugPrintln("IsPlaying:", player.IsPlaying(), "DoNext:", player.DoNext, "Len:", len(player.Playlist.Playlist), "Count", player.Playlist.Count(), "PlPos:", player.Playlist.Position, "DoNext:", player.DoNext, "HasNext:", player.Playlist.HasNext())
+	helper.DebugPrintln("IsPlaying:", player.IsPlaying(), "Len:", len(player.Playlist.Playlist), "Count", player.Playlist.Count(), "PlPos:", player.Playlist.Position, "HasNext:", player.Playlist.HasNext())
 	command, arg := getCommandAndArg(msg, player.Client.Self.Name, isPrivate, player.Config)
 
 	switch command {
@@ -33,8 +33,7 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 			helper.MsgDispatch(player.Client, isPrivate, sender, "Not Added: invalid ID or URL") // TODO: Standardize error messages
 		}
 	case "stop":
-		player.DoNext = "stop"
-		player.Stop()
+		player.Stop(true)
 	case "skip", "next":
 		value, err := strconv.Atoi(arg)
 		if err != nil {
@@ -75,19 +74,18 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 }
 
 func playNow(player *playback.Player, sender string, isPrivate bool, track string) {
-	if player.IsRadio {
+	if player.IsRadio && player.IsPlaying() {
 		toggleRadio(player, sender, isPrivate)
 	}
-	if player.Playlist.AddNext(track) {
-		if player.IsStopped() && !player.Playlist.HasNext() && !player.Playlist.IsEmpty() {
+
+	player.Stop(true)
+	if player.IsStopped() && player.Playlist.AddNext(track) {
+		if !player.Playlist.HasNext() {
 			player.PlayCurrent()
-			return
-		} else if player.IsStopped() && player.Playlist.HasNext() {
-			player.Skip(1)
+		} else {
+			player.Playlist.Skip(1)
 			player.PlayCurrent()
-			return
 		}
-		player.Skip(1)
 	} else {
 		helper.MsgDispatch(player.Client, isPrivate, sender, "Not Added: invalid ID or URL") // TODO: Standardize error messages
 	}
@@ -96,10 +94,10 @@ func playNow(player *playback.Player, sender string, isPrivate bool, track strin
 func toggleRadio(player *playback.Player, sender string, isPrivate bool) {
 	if !player.IsRadio {
 		helper.MsgDispatch(player.Client, isPrivate, sender, "Enabled Radio Mode, Shuffling forever.")
+		player.IsRadio = true
 		if !player.IsPlaying() {
 			playNow(player, sender, isPrivate, strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
 		}
-		player.IsRadio = true
 	} else {
 		player.IsRadio = false
 		helper.MsgDispatch(player.Client, isPrivate, sender, "Disabled Radio Mode.")

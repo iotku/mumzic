@@ -20,14 +20,14 @@ import (
 )
 
 type Player struct {
-	stream   *gumbleffmpeg.Stream
-	Client   *gumble.Client
-	targets  []*gumble.User
-	Playlist playlist.List
-	Volume   float32
-	DoNext   string
-	IsRadio  bool
-	Config   *config.Config
+	stream      *gumbleffmpeg.Stream
+	Client      *gumble.Client
+	targets     []*gumble.User
+	Playlist    playlist.List
+	Volume      float32
+	IsRadio     bool
+	wantsToStop bool
+	Config      *config.Config
 }
 
 func (player *Player) AddTarget(username string) {
@@ -94,10 +94,10 @@ func NewPlayer(client *gumble.Client, config *config.Config) *Player {
 			Playlist: make([][]string, 0),
 			Position: 0,
 		},
-		Volume:  config.Volume,
-		IsRadio: false,
-		DoNext:  "stop", // stop, next
-		Config:  config,
+		Volume:      config.Volume,
+		wantsToStop: true,
+		IsRadio:     false,
+		Config:      config,
 	}
 }
 
@@ -123,30 +123,25 @@ func (player *Player) WaitForStop() {
 		return
 	}
 	player.stream.Wait()
-	if player.IsRadio && player.DoNext != "stop" {
-		if player.Playlist.AddNext(strconv.Itoa(search.GetRandomTrackIDs(1)[0])) {
-			player.Playlist.Next()
-			player.PlayCurrent()
-		}
-		return
+
+	if player.IsRadio {
+		player.Playlist.AddNext(strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
 	}
 
-	switch player.DoNext {
-	case "stop":
+	if player.Playlist.HasNext() && !player.wantsToStop {
+		player.Playlist.Next()
+		player.PlayCurrent()
+	} else {
+		player.Stop(true)
 		helper.SetComment(player.Client, "Not Playing.")
-	case "next":
-		if player.Playlist.HasNext() {
-			player.Playlist.Next()
-			player.PlayCurrent()
-		} else {
-			player.DoNext = "stop"
-		}
-	default:
 	}
 }
 
 func (player *Player) Play(path string) {
-	player.Stop()
+	if player.IsPlaying() {
+		player.Stop(false)
+	}
+
 	path = helper.StripHTMLTags(path)
 	var err error
 	if strings.HasPrefix(path, "http") {
@@ -160,8 +155,7 @@ func (player *Player) Play(path string) {
 		return
 	}
 
-	player.DoNext = "next"
-
+	player.wantsToStop = false
 	nowPlaying := player.NowPlaying()
 	helper.ChanMsg(player.Client, nowPlaying)
 	helper.SetComment(player.Client, nowPlaying)
@@ -193,7 +187,8 @@ func (player *Player) NowPlaying() string {
 	return output
 }
 
-func (player *Player) Stop() {
+func (player *Player) Stop(wantsToStop bool) {
+	player.wantsToStop = wantsToStop
 	if player.IsPlaying() {
 		player.stream.Stop() //#nosec G104 -- Only error this will respond with is stream not playing.
 		player.stream.Wait() // This may help alleviate issues as descried below
@@ -219,15 +214,12 @@ func (player *Player) PlayFile(path string) error {
 
 func (player *Player) Skip(amount int) {
 	if player.Playlist.HasNext() && !player.IsRadio {
-		player.DoNext = "skip"
 		player.Playlist.Skip(amount)
 		player.PlayCurrent()
-		player.DoNext = "next"
 	} else if player.IsRadio {
-		player.Stop()
+		player.Stop(false)
 	} else {
-		player.DoNext = "stop"
-		player.Stop()
+		player.Stop(true)
 	}
 }
 
