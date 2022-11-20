@@ -128,12 +128,16 @@ func (player *Player) WaitForStop() {
 		player.Playlist.AddNext(strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
 	}
 
-	if player.Playlist.HasNext() && !player.wantsToStop {
+	if player.wantsToStop {
+		player.Stop(true) // May Double Stop but this is fine?
+		return
+	}
+
+	if player.Playlist.HasNext() {
 		player.Playlist.Next()
 		player.PlayCurrent()
 	} else {
 		player.Stop(true)
-		helper.SetComment(player.Client, "Not Playing.")
 	}
 }
 
@@ -191,6 +195,7 @@ func (player *Player) Stop(wantsToStop bool) {
 	player.wantsToStop = wantsToStop
 	if player.IsPlaying() {
 		player.stream.Stop() //#nosec G104 -- Only error this will respond with is stream not playing.
+		helper.SetComment(player.Client, "Not Playing.")
 		player.stream.Wait() // This may help alleviate issues as descried below
 		if player.IsPlaying() && player.wantsToStop {
 			// There have been some occasions where another stream begins and turns into a garbled
@@ -214,7 +219,7 @@ func (player *Player) PlayFile(path string) error {
 
 func (player *Player) Skip(amount int) {
 	if player.Playlist.HasNext() && !player.IsRadio {
-		player.Stop(true)
+		player.Stop(false)
 		player.Playlist.Skip(amount)
 		player.PlayCurrent()
 	} else if player.IsRadio {
