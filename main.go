@@ -40,7 +40,7 @@ func main() {
 			}
 		},
 		ChannelChange: func(e *gumble.ChannelChangeEvent) {
-			if bConfig != nil && e.Channel.Name != "Root" {
+			if bConfig != nil && !e.Channel.IsRoot() {
 				bConfig.Channel = e.Channel.Name
 			}
 			if channelPlayer != nil {
@@ -49,6 +49,7 @@ func main() {
 		},
 		Disconnect: func(e *gumble.DisconnectEvent) {
 			log.Println("Disconnecting: ", e.Type)
+			bConfig.Channel = channelPlayer.Client.Self.Channel.Name
 			bConfig.Save()
 			channelPlayer.Playlist.Save(bConfig.Hostname)
 			config.CloseDatabase()

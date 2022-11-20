@@ -61,6 +61,7 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 	case "search", "find":
 		find(player, sender, isPrivate, arg)
 	case "saveconf":
+		player.Config.Channel = player.Client.Self.Channel.Name
 		player.Config.Save()
 	case "more":
 		helper.MsgDispatch(player.Client, isPrivate, sender, messages.GetMoreTable(sender))
