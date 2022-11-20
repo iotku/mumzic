@@ -219,7 +219,7 @@ func (player *Player) PlayFile(path string) error {
 
 func (player *Player) Skip(amount int) {
 	if player.Playlist.HasNext() && !player.IsRadio {
-		player.Stop(false)
+		player.Stop(true)
 		player.Playlist.Skip(amount)
 		player.PlayCurrent()
 	} else if player.IsRadio {
