@@ -20,7 +20,7 @@ func IsCommand(message string, isPrivate bool, username string, config *config.C
 
 func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender string) {
 	helper.DebugPrintln("IsPlaying:", player.IsPlaying(), "Len:", len(player.Playlist.Playlist), "Count", player.Playlist.Count(), "PlPos:", player.Playlist.Position, "HasNext:", player.Playlist.HasNext())
-	command, arg := getCommandAndArg(msg, player.Client.Self.Name, isPrivate, player.Config)
+	command, arg := getCommandAndArg(msg, player.Client.Self.Name, player.Config)
 
 	switch command {
 	case "play", "add":
@@ -130,7 +130,7 @@ func addSongToQueue(player *playback.Player, id string) (string, error) {
 	return human, nil
 }
 
-func getCommandAndArg(msg, name string, isPrivate bool, conf *config.Config) (command, arg string) {
+func getCommandAndArg(msg, name string, conf *config.Config) (command, arg string) {
 	var skipUserName = 0
 	msg = strings.TrimSpace(msg)
 	if strings.HasPrefix(msg, conf.Prefix) {
