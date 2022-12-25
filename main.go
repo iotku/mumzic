@@ -70,7 +70,7 @@ func logMessage(e *gumble.TextMessageEvent, isPrivate bool) {
 
 func getValueFromFlag(lookup *flag.Flag) string {
 	if lookup == nil {
-		return "unknown"
+		panic("getValueFromFlag: flagNotFound: nil")
 	}
 
 	return lookup.Value.String()
