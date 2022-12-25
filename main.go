@@ -2,12 +2,12 @@ package main
 
 import (
 	"flag"
+	"github.com/iotku/mumzic/database"
 	"log"
 
 	"github.com/iotku/mumzic/commands"
 	"github.com/iotku/mumzic/config"
 	"github.com/iotku/mumzic/playback"
-	"github.com/iotku/mumzic/search"
 	_ "github.com/mattn/go-sqlite3"
 	"layeh.com/gumble/gumble"
 	"layeh.com/gumble/gumbleutil"
@@ -28,7 +28,7 @@ func main() {
 
 			channelPlayer = playback.NewPlayer(e.Client, bConfig)
 			channelPlayer.Playlist.Load(bConfig.Hostname)
-			log.Printf("audio player loaded! (%d files)\n", search.MaxID)
+			log.Printf("audio player loaded! (%d files)\n", database.GetMaxID())
 		},
 		TextMessage: func(e *gumble.TextMessageEvent) {
 			if e.Sender == nil {
@@ -56,6 +56,7 @@ func main() {
 			bConfig.Save()
 			channelPlayer.Playlist.Save(bConfig.Hostname)
 			config.CloseDatabase()
+			database.Close()
 		},
 	})
 }

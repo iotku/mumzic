@@ -129,7 +129,7 @@ func (player *Player) WaitForStop() {
 		player.Stop(true) // May Double Stop but this is fine?
 		return
 	}
-	
+
 	if player.IsRadio {
 		player.Playlist.AddNext(strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
 	}
