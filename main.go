@@ -16,9 +16,12 @@ import (
 func main() {
 	var channelPlayer *playback.Player
 	var bConfig *config.Config
+	var hostname, username string
 	gumbleutil.Main(gumbleutil.AutoBitrate, gumbleutil.Listener{
 		Connect: func(e *gumble.ConnectEvent) {
-			bConfig = config.NewConfig(getValueFromFlag(flag.Lookup("server")))
+			hostname = getValueFromFlag(flag.Lookup("server"))
+			username = getValueFromFlag(flag.Lookup("username"))
+			bConfig = config.NewConfig(hostname)
 			if e.Client.Channels.Find(bConfig.Channel) != nil {
 				e.Client.Self.Move(e.Client.Channels.Find(bConfig.Channel))
 			}
@@ -35,7 +38,7 @@ func main() {
 			isPrivate := len(e.TextMessage.Channels) == 0 // If no channels, is private message
 			logMessage(e, isPrivate)
 
-			if commands.IsCommand(e.Message, isPrivate, bConfig) {
+			if commands.IsCommand(e.Message, isPrivate, username, bConfig) {
 				go commands.CommandDispatch(channelPlayer, e.Message, isPrivate, e.Sender.Name)
 			}
 		},

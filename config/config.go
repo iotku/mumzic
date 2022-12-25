@@ -13,7 +13,6 @@ type Config struct {
 	Prefix   string  // Prefix for commands in channel chat
 	Channel  string  // Channel the bot is occupying or last occupied
 	Hostname string  // Hostname of connected server
-	Username string  // Username of bot
 }
 
 // MaxLines is the most lines you wish to output to screen before potentially going into the more/less system

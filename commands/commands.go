@@ -12,9 +12,9 @@ import (
 	"github.com/iotku/mumzic/search"
 )
 
-func IsCommand(message string, isPrivate bool, config *config.Config) bool {
+func IsCommand(message string, isPrivate bool, username string, config *config.Config) bool {
 	message = strings.TrimSpace(message)
-	return strings.HasPrefix(message, config.Prefix) || strings.HasPrefix(message, config.Username) || isPrivate
+	return strings.HasPrefix(message, config.Prefix) || strings.HasPrefix(message, username) || isPrivate
 }
 
 func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender string) {
@@ -130,21 +130,22 @@ func addSongToQueue(player *playback.Player, id string) (string, error) {
 }
 
 func getCommandAndArg(msg, name string, isPrivate bool, conf *config.Config) (command, arg string) {
+	var skipUserName = 0
 	msg = strings.TrimSpace(msg)
 	if strings.HasPrefix(msg, conf.Prefix) {
 		msg = msg[len(conf.Prefix):]
 	} else if strings.HasPrefix(msg, name) {
-		msg = strings.TrimSpace(msg[len(name):])
+		skipUserName = 1
 	}
 
 	split := strings.Split(msg, " ")
-	for i := 1; i < len(split); i++ {
+	for i := 1 + skipUserName; i < len(split); i++ {
 		arg += split[i] + " "
 	}
 	if strings.HasPrefix(msg, name) && len(split) == 1 {
 		return "", ""
 	}
-	return strings.ToLower(split[0]), strings.TrimSpace(arg)
+	return strings.ToLower(split[skipUserName]), strings.TrimSpace(arg)
 }
 
 func play(id string, sender string, isPrivate bool, player *playback.Player) {
