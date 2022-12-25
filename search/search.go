@@ -40,7 +40,7 @@ func GetTrackById(trackID int) (human, path string) {
 		return "", ""
 	}
 	var artist, title, album string
-	err := database.SongDB.QueryRow("select path,artist,title,album from MUSIC where ROWID = ?", trackID).Scan(&path, &artist, &title, &album)
+	err := database.SongDB.QueryRow("SELECT path,artist,title,album from music where ROWID = ?", trackID).Scan(&path, &artist, &title, &album)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
 			return "", ""
@@ -55,7 +55,6 @@ func GetTrackById(trackID int) (human, path string) {
 func FindArtistTitle(Query string) []string {
 	Query = fmt.Sprintf("%%%s%%", Query)
 	rows := makeDbQuery("SELECT ROWID, * FROM music where (artist || \" \" || title)  LIKE ? LIMIT 25", Query)
-	defer checkErrPanic(rows.Close())
 
 	var rowID int
 	var artist, album, title, path string
@@ -65,6 +64,7 @@ func FindArtistTitle(Query string) []string {
 		checkErrPanic(err)
 		output = append(output, fmt.Sprintf("#%d | %s - %s (%s)", rowID, artist, title, album))
 	}
+	checkErrPanic(rows.Close())
 
 	return output
 }
