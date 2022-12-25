@@ -237,7 +237,7 @@ func (player *Player) PlayYT(url string) error {
 		return errors.New("URL Doesn't Meet whitelist")
 	}
 
-	player.stream = gumbleffmpeg.New(player.Client, youtubedl.GetYtdlSource(url))
+	player.stream = gumbleffmpeg.New(player.Client, youtubedl.GetYtDLSource(url))
 	player.stream.Volume = player.Volume
 	err := player.stream.Play()
 	return err

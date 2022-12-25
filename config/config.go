@@ -69,7 +69,7 @@ func (config *Config) Save() {
 		log.Fatal(err)
 	}
 	stmt := prepareUpdate(tx)
-	defer stmt.Close()
+	defer checkErrPanic(stmt.Close())
 	// There must be a better way to do this, but I'm tired and this will do for now.
 	_, err = stmt.Exec(config.Volume, config.Channel, config.Prefix, config.Hostname)
 	checkErrPanic(err)

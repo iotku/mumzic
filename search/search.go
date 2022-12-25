@@ -30,7 +30,7 @@ func getMaxID(database string) int {
 		return 0
 	}
 	db, err := sql.Open("sqlite3", database)
-	defer db.Close()
+	defer checkErrPanic(db.Close())
 	checkErrPanic(err)
 	var count int
 	err = db.QueryRow("select max(ROWID) from music;").Scan(&count)
@@ -45,7 +45,7 @@ func GetRandomTrackIDs(amount int) (idList []int) {
 	}
 
 	db, err := sql.Open("sqlite3", config.SongDB)
-	defer db.Close()
+	defer checkErrPanic(db.Close())
 	checkErrPanic(err)
 	var rows *sql.Rows
 	rows, err = db.Query("SELECT ROWID from music ORDER BY random() LIMIT ?", amount)
@@ -68,7 +68,7 @@ func GetTrackById(trackID int) (human, path string) {
 	}
 	db, err := sql.Open("sqlite3", config.SongDB)
 	checkErrPanic(err)
-	defer db.Close()
+	defer checkErrPanic(db.Close())
 	var artist, title, album string
 	err = db.QueryRow("select path,artist,title,album from MUSIC where ROWID = ?", trackID).Scan(&path, &artist, &title, &album)
 	if err != nil {
@@ -82,10 +82,10 @@ func GetTrackById(trackID int) (human, path string) {
 	return
 }
 
-func SearchALL(Query string) []string {
+func FindArtistTitle(Query string) []string {
 	Query = fmt.Sprintf("%%%s%%", Query)
 	rows := makeDbQuery(config.SongDB, "SELECT ROWID, * FROM music where (artist || \" \" || title)  LIKE ? LIMIT 25", Query)
-	defer rows.Close()
+	defer checkErrPanic(rows.Close())
 
 	var rowID int
 	var artist, album, title, path string
@@ -100,10 +100,10 @@ func SearchALL(Query string) []string {
 }
 
 // Helper Functions
-func makeDbQuery(songdb, query string, args ...interface{}) *sql.Rows {
-	db, err := sql.Open("sqlite3", songdb)
+func makeDbQuery(database, query string, args ...interface{}) *sql.Rows {
+	db, err := sql.Open("sqlite3", database)
 	checkErrPanic(err)
-	defer db.Close()
+	defer checkErrPanic(db.Close())
 	rows, err := db.Query(query, args...)
 	checkErrPanic(err)
 

@@ -181,7 +181,7 @@ func (list *List) AddNext(arg string) bool {
 func getHumanAndPath(arg string) (human, path string, err error) {
 	path = helper.StripHTMLTags(arg)
 	if strings.HasPrefix(path, "http") && youtubedl.IsWhiteListedURL(path) == true {
-		human = youtubedl.GetYtdlTitle(path)
+		human = youtubedl.GetYtDLTitle(path)
 		if human == "" {
 			human = path
 		}

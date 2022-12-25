@@ -200,7 +200,7 @@ func list(player *playback.Player, sender string, isPrivate bool) {
 }
 
 func find(player *playback.Player, sender string, isPrivate bool, arg string) {
-	results := search.SearchALL(arg)
+	results := search.FindArtistTitle(arg)
 
 	output := messages.MakeTable("Search Results")
 	messages.SaveMoreRows(sender, results, output)

@@ -21,11 +21,11 @@ func IsWhiteListedURL(url string) bool {
 	return false
 }
 
-func GetYtdlTitle(url string) string {
-	ytdl := exec.Command("yt-dlp", "--no-playlist", "-e", url)
+func GetYtDLTitle(url string) string {
+	ytDL := exec.Command("yt-dlp", "--no-playlist", "-e", url)
 	var output bytes.Buffer
-	ytdl.Stdout = &output
-	err := ytdl.Run()
+	ytDL.Stdout = &output
+	err := ytDL.Run()
 	if err != nil {
 		log.Println("Youtube-DL failed to get title for", url)
 		return ""
@@ -33,7 +33,7 @@ func GetYtdlTitle(url string) string {
 	return output.String()
 }
 
-func GetYtdlSource(url string) gumbleffmpeg.Source {
+func GetYtDLSource(url string) gumbleffmpeg.Source {
 	// TODO: Make special handling for playlists?
 	return gumbleffmpeg.SourceExec("yt-dlp", "--no-playlist", "-f", "bestaudio", "--rm-cache-dir", "-q", "-o", "-", url)
 }
