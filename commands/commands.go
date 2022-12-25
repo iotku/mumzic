@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -184,7 +185,7 @@ func vol(player *playback.Player, sender string, isPrivate bool, arg string) {
 		}
 		player.SetVolume(0.01 * float32(argInt))
 	}
-	helper.MsgDispatch(player.Client, isPrivate, sender, "Current Volume: "+fmt.Sprintf("%d", int(player.Volume*100)))
+	helper.MsgDispatch(player.Client, isPrivate, sender, "Current Volume: "+fmt.Sprintf("%d", int(math.Ceil(float64(player.Volume*100)))))
 }
 
 func list(player *playback.Player, sender string, isPrivate bool) {
