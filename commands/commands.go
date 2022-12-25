@@ -192,7 +192,7 @@ func vol(player *playback.Player, sender string, isPrivate bool, arg string) {
 		}
 		player.SetVolume(0.01 * float32(argInt))
 	}
-	helper.MsgDispatch(player.Client, isPrivate, sender, "Current Volume: "+fmt.Sprintf("%f", player.Volume))
+	helper.MsgDispatch(player.Client, isPrivate, sender, "Current Volume: "+fmt.Sprintf("%d", int(player.Volume*100)))
 }
 
 func list(player *playback.Player, sender string, isPrivate bool) {
