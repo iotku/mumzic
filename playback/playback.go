@@ -125,13 +125,13 @@ func (player *Player) WaitForStop() {
 	}
 	player.stream.Wait()
 
-	if player.IsRadio {
-		player.Playlist.AddNext(strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
-	}
-
 	if player.wantsToStop {
 		player.Stop(true) // May Double Stop but this is fine?
 		return
+	}
+	
+	if player.IsRadio {
+		player.Playlist.AddNext(strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
 	}
 
 	if player.Playlist.HasNext() {
