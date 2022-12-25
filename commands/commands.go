@@ -150,37 +150,28 @@ func getCommandAndArg(msg, name string, isPrivate bool, conf *config.Config) (co
 func play(id string, sender string, isPrivate bool, player *playback.Player) {
 	var err error
 	var human string
-	if player.IsPlaying() {
-		if id == "" {
-			return
-		}
-		human, err = addSongToQueue(player, id)
-	} else {
-		if id == "" && !player.Playlist.IsEmpty() {
-			player.PlayCurrent()
-			return
-		} else if id == "" && player.Playlist.IsEmpty() {
-			return
-		}
-		var playNext bool
-		if !player.Playlist.IsEmpty() && !player.Playlist.HasNext() {
-			playNext = true
-		}
-		human, err = addSongToQueue(player, id)
-		if playNext && err == nil {
-			player.Skip(1)
-		} else if err == nil {
-			player.PlayCurrent()
-		}
+	var playNext bool
+
+	if id == "" {
+		player.PlayCurrent() // returns if playing already
+		return
 	}
+
+	if !player.Playlist.IsEmpty() && !player.Playlist.HasNext() {
+		playNext = true
+	}
+
+	human, err = addSongToQueue(player, id)
 	if err != nil {
 		helper.MsgDispatch(player.Client, isPrivate, sender, err.Error())
 		return
 	}
+	helper.MsgDispatch(player.Client, isPrivate, sender, "Queued: "+human)
 
-	if human != "" {
-		helper.MsgDispatch(player.Client, isPrivate, sender, "Queued: "+human)
+	if !player.IsPlaying() && playNext {
+		player.Skip(1)
 	}
+	player.PlayCurrent()
 }
 
 func vol(player *playback.Player, sender string, isPrivate bool, arg string) {

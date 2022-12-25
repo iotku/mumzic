@@ -111,8 +111,9 @@ func (player *Player) IsPlaying() bool {
 	return player.stream != nil && player.stream.State() == gumbleffmpeg.StatePlaying
 }
 
+// PlayCurrent plays the playlist at the current position should the player not already be playing.
 func (player *Player) PlayCurrent() {
-	if !player.Playlist.IsEmpty() {
+	if !player.Playlist.IsEmpty() && !player.IsPlaying() {
 		player.Play(player.Playlist.GetCurrentPath())
 	}
 }
