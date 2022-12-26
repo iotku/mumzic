@@ -169,25 +169,19 @@ func (player *Player) Play(path string) {
 
 func (player *Player) NowPlaying() string {
 	artPath := messages.FindCoverArtPath(player.Playlist.GetCurrentPath())
-	var artImg, radioMode string
+	var artImg, output string
 	if artPath != "" {
 		artImg = messages.GenerateCoverArtImg(artPath)
 	}
 
+	output = " <h2><u>Now Playing</u></h2><table><tr><td>" + artImg + "</td><td>" + "<table><tr><td>" +
+		player.Playlist.GetCurrentHuman() + "</td></tr>"
 	if player.IsRadio {
-		radioMode = "<tr><td>Radio Mode: <b>Enabled</b></td></tr><tr>" +
-			"<td>Use <b>radio</b> to go back to normal mode</td><tr>"
+		output += "<tr><td><b>Radio</b> Mode: <b>Enabled</b></td></tr><tr>"
+	} else {
+		output += "<tr><td><b>" + strconv.Itoa(player.Playlist.Count()) + "</b> songs queued</td></tr>"
 	}
-	output := " <h2><u>Now Playing</u></h2><table><tr><td>" +
-		artImg + "</td><td>" +
-		"<table><tr><td>" +
-		player.Playlist.GetCurrentHuman() +
-		"</td></tr>" +
-		"<tr><td><b>" + strconv.Itoa(player.Playlist.Count()) +
-		"</b> songs queued</td></tr>" +
-		radioMode +
-		"</table>" +
-		"</td></tr></table>"
+	output += "</table>" + "</td></tr></table>"
 
 	return output
 }
