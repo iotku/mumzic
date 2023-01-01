@@ -150,25 +150,26 @@ func getCommandAndArg(msg, name string, conf *config.Config) (command, arg strin
 }
 
 func play(id string, sender string, isPrivate bool, player *playback.Player) {
-	var err error
-	var human string
-	var playNext bool
-
 	if id == "" {
 		player.PlayCurrent() // returns if playing already
 		return
 	}
 
+	var playNext bool
 	if !player.Playlist.IsEmpty() && !player.Playlist.HasNext() {
 		playNext = true
 	}
 
-	human, err = addSongToQueue(player, id)
+	human, err := addSongToQueue(player, id)
 	if err != nil {
 		helper.MsgDispatch(player.Client, isPrivate, sender, err.Error())
 		return
 	}
 	helper.MsgDispatch(player.Client, isPrivate, sender, "Queued: "+human)
+
+	if player.IsRadio {
+		toggleRadio(player, sender, isPrivate)
+	}
 
 	if !player.IsPlaying() && playNext {
 		player.Skip(1)
