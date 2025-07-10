@@ -25,13 +25,17 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 	switch command {
 	case "play", "add":
 		play(arg, sender, isPrivate, player)
-	case "playnow":
+	case "playnow", "p":
 		playNow(player, sender, isPrivate, arg)
 	case "playnext", "addnext":
-		if player.Playlist.AddNext(arg) {
+		if ok, err := player.Playlist.AddNext(arg); ok {
 			helper.MsgDispatch(player.Client, isPrivate, sender, "Added: "+player.Playlist.GetNextHuman())
 		} else {
-			helper.MsgDispatch(player.Client, isPrivate, sender, "Not Added: invalid ID or URL") // TODO: Standardize error messages
+			errMsg := "Not Added: invalid ID or URL"
+			if err != nil {
+				errMsg = "Not Added: " + err.Error()
+			}
+			helper.MsgDispatch(player.Client, isPrivate, sender, errMsg)
 		}
 	case "stop":
 		player.Stop(true)
@@ -80,17 +84,23 @@ func playNow(player *playback.Player, sender string, isPrivate bool, track strin
 		toggleRadio(player, sender, isPrivate)
 	}
 
-	player.Stop(true)
-	if player.IsStopped() && player.Playlist.AddNext(track) {
-		if !player.Playlist.HasNext() {
-			player.PlayCurrent()
-		} else {
-			player.Playlist.Skip(1)
-			player.PlayCurrent()
-		}
-	} else {
-		helper.MsgDispatch(player.Client, isPrivate, sender, "Not Added: invalid ID or URL") // TODO: Standardize error messages
+	// Use the same logic as play() to properly queue the song
+	var playNext bool
+	if !player.Playlist.IsEmpty() && !player.Playlist.HasNext() {
+		playNext = true
 	}
+
+	human, err := addSongToQueue(player, track)
+	if err != nil {
+		helper.MsgDispatch(player.Client, isPrivate, sender, err.Error())
+		return
+	}
+	helper.MsgDispatch(player.Client, isPrivate, sender, "Queued: "+human)
+
+	if !player.IsPlaying() && playNext {
+		player.Skip(1)
+	}
+	player.PlayCurrent()
 }
 
 func toggleRadio(player *playback.Player, sender string, isPrivate bool) {

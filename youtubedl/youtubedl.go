@@ -21,6 +21,26 @@ func IsWhiteListedURL(url string) bool {
 	return false
 }
 
+// SearchYouTube searches for a video on YouTube using yt-dlp and returns the first result URL
+func SearchYouTube(query string) string {
+	ytDL := exec.Command("yt-dlp", "--no-playlist", "--get-id", "--default-search", "ytsearch1", query)
+	var output bytes.Buffer
+	ytDL.Stdout = &output
+	err := ytDL.Run()
+	if err != nil {
+		log.Println("Youtube-DL failed to search for:", query)
+		return ""
+	}
+	
+	videoID := strings.TrimSpace(output.String())
+	if videoID == "" {
+		return ""
+	}
+	
+	// Convert video ID to full YouTube URL
+	return "https://www.youtube.com/watch?v=" + videoID
+}
+
 func GetYtDLTitle(url string) string {
 	ytDL := exec.Command("yt-dlp", "--no-playlist", "-e", url)
 	var output bytes.Buffer
