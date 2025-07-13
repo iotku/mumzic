@@ -131,7 +131,11 @@ func (player *Player) WaitForStop() {
 	}
 
 	if player.IsRadio {
-		player.Playlist.AddNext(strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
+		_, err := player.Playlist.AddNext(strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
+		if err != nil {
+			helper.ChanMsg(player.Client, "<b style=\"color:red\">Error Adding Radio Track: </b>"+err.Error())
+			log.Println("Radio failed to Playlist.AddNext a random track ID, stale database?: ", err)
+		}
 	}
 
 	if player.Playlist.HasNext() {

@@ -156,7 +156,7 @@ func (list *List) AddToQueue(path string) (string, error) {
 	return human, nil
 }
 
-// AddNext adds a song to play next. Now returns (bool, error) and uses the same fallback logic as AddToQueue.
+// AddNext adds a song to play directly after the current song in the Playlist
 func (list *List) AddNext(arg string) (bool, error) {
 	human, path, err := getHumanAndPath(arg)
 	if err != nil {
@@ -198,7 +198,7 @@ func getHumanAndPath(arg string) (human, path string, err error) {
 			return
 		}
 	}
-	
+
 	// If not a valid ID, try YouTube search
 	searchURL := youtubedl.SearchYouTube(arg)
 	if searchURL != "" {
@@ -209,7 +209,7 @@ func getHumanAndPath(arg string) (human, path string, err error) {
 		path = searchURL
 		return
 	}
-	
+
 	return "", "", errors.New("id not found and search failed")
 }
 
