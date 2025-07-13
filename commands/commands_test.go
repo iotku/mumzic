@@ -58,3 +58,16 @@ func TestGetCommandAndArg(t *testing.T) {
 		t.Errorf("got %q %q, wanted %q %q", got1, got2, "", "")
 	}
 }
+
+func TestPlayNowAlias(t *testing.T) {
+	// Test that "p" command is properly parsed as "playnow"
+	got1, got2 := getCommandAndArg("!p song name", "MusicButt", &Config)
+	if got1 != "p" || got2 != "song name" {
+		t.Errorf("got %q %q, wanted %q %q", got1, got2, "p", "song name")
+	}
+
+	got1, got2 = getCommandAndArg("MusicButt p song name", "MusicButt", &Config)
+	if got1 != "p" || got2 != "song name" {
+		t.Errorf("got %q %q, wanted %q %q", got1, got2, "p", "song name")
+	}
+}

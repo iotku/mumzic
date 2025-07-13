@@ -156,14 +156,15 @@ func (list *List) AddToQueue(path string) (string, error) {
 	return human, nil
 }
 
-func (list *List) AddNext(arg string) bool {
+// AddNext adds a song to play next. Now returns (bool, error) and uses the same fallback logic as AddToQueue.
+func (list *List) AddNext(arg string) (bool, error) {
 	human, path, err := getHumanAndPath(arg)
 	if err != nil {
-		return false
+		return false, err
 	}
 	if list.Count() <= 1 || !list.HasNext() {
 		list.pAdd(path, human)
-		return true
+		return true, nil
 	}
 
 	var newList [][]string
@@ -175,7 +176,7 @@ func (list *List) AddNext(arg string) bool {
 	list.Playlist = newList
 	list.Position = 0
 
-	return true
+	return true, nil
 }
 
 func getHumanAndPath(arg string) (human, path string, err error) {
@@ -190,15 +191,26 @@ func getHumanAndPath(arg string) (human, path string, err error) {
 		return "", "", errors.New("URL Doesn't meet whitelist")
 	}
 
-	id, err := strconv.Atoi(path)
-	if err != nil {
-		return "", "", errors.New("id not found")
+	// Try to parse as ID first
+	if id, parseErr := strconv.Atoi(path); parseErr == nil {
+		human, path = search.GetTrackById(id)
+		if path != "" {
+			return
+		}
 	}
-	human, path = search.GetTrackById(id)
-	if path == "" {
-		return "", "", errors.New("id not found")
+	
+	// If not a valid ID, try YouTube search
+	searchURL := youtubedl.SearchYouTube(arg)
+	if searchURL != "" {
+		human = youtubedl.GetYtDLTitle(searchURL)
+		if human == "" {
+			human = arg
+		}
+		path = searchURL
+		return
 	}
-	return
+	
+	return "", "", errors.New("id not found and search failed")
 }
 
 func (list *List) pAdd(path, human string) {
