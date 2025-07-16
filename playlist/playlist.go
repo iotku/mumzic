@@ -51,9 +51,9 @@ func (list *List) Save(hostname string) {
 }
 
 func (list *List) Load(hostname string) {
-	if _, err := os.Open(Directory + hostname); //#nosec G304 - hostname considered rusted source
+	if _, err := os.Open(Directory + hostname); //#nosec G304 - hostname considered trusted source
 	err == nil {
-		file, err := os.ReadFile(Directory + hostname) //#nosec G304 - hostname considered rusted source
+		file, err := os.ReadFile(Directory + hostname) //#nosec G304 - hostname considered trusted source
 		if err != nil {
 			log.Fatalln(err.Error())
 		}
