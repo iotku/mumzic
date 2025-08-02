@@ -1,11 +1,14 @@
 package playback
 
 import (
+	"context"
 	"errors"
 	"log"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/iotku/mumzic/config"
 	"github.com/iotku/mumzic/helper"
@@ -20,14 +23,20 @@ import (
 )
 
 type Player struct {
-	stream      *gumbleffmpeg.Stream
-	Client      *gumble.Client
-	targets     []*gumble.User
-	Playlist    playlist.List
-	Volume      float32
-	IsRadio     bool
-	wantsToStop bool
-	Config      *config.Config
+	stream   *gumbleffmpeg.Stream
+	Client   *gumble.Client
+	targets  []*gumble.User
+	Playlist playlist.List
+	Volume   float32
+	IsRadio  bool
+	Config   *config.Config
+
+	// Syncronization
+	mu         sync.RWMutex
+	stopCtx    context.Context
+	stopCancel context.CancelFunc
+	stopDone   chan struct{}
+	isPlaying  bool
 }
 
 func (player *Player) AddTarget(username string) {
@@ -86,6 +95,7 @@ func (player *Player) TargetUsers() {
 }
 
 func NewPlayer(client *gumble.Client, config *config.Config) *Player {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Player{
 		stream:  nil,
 		Client:  client,
@@ -94,10 +104,13 @@ func NewPlayer(client *gumble.Client, config *config.Config) *Player {
 			Playlist: make([][]string, 0),
 			Position: 0,
 		},
-		Volume:      config.Volume,
-		wantsToStop: true,
-		IsRadio:     false,
-		Config:      config,
+		Volume:     config.Volume,
+		IsRadio:    false,
+		Config:     config,
+		stopCtx:    ctx,
+		stopCancel: cancel,
+		stopDone:   make(chan struct{}),
+		isPlaying:  false,
 	}
 }
 
@@ -108,7 +121,9 @@ func (player *Player) IsStopped() bool {
 
 // IsPlaying returns true if the Stream exists and claims to be playing
 func (player *Player) IsPlaying() bool {
-	return player.stream != nil && player.stream.State() == gumbleffmpeg.StatePlaying
+	player.mu.RLock()
+	defer player.mu.RUnlock()
+	return player.isPlaying && player.stream != nil && player.stream.State() == gumbleffmpeg.StatePlaying
 }
 
 // PlayCurrent plays the playlist at the current position should the player not already be playing.
@@ -123,10 +138,32 @@ func (player *Player) WaitForStop() {
 	if player.IsStopped() {
 		return
 	}
-	player.stream.Wait()
 
-	if player.wantsToStop {
-		player.Stop(true) // May Double Stop but this is fine?
+	// Wait for either stream completion or stop signal
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		player.stream.Wait()
+	}()
+
+	select {
+	case <-done: // Stream finished
+	case <-player.stopCtx.Done(): // Stop requested
+		player.ensureStreamStopped()
+		return
+	}
+
+	if !player.waitForActualStop(3 * time.Second) {
+		log.Println("WARNING: Stream did not stop properly within timeout")
+		return
+	}
+
+	player.mu.RLock()
+	shouldContinue := player.isPlaying
+	player.mu.RUnlock()
+
+	if !shouldContinue {
+		player.markStopped()
 		return
 	}
 
@@ -142,13 +179,14 @@ func (player *Player) WaitForStop() {
 		player.Playlist.Next()
 		player.PlayCurrent()
 	} else {
-		player.Stop(true)
+		player.requestStop()
 	}
 }
 
 func (player *Player) Play(path string) {
 	if player.IsPlaying() {
-		player.Stop(false)
+		player.requestStop()
+		player.waitForActualStop(3 * time.Second)
 	}
 
 	path = helper.StripHTMLTags(path)
@@ -164,11 +202,11 @@ func (player *Player) Play(path string) {
 		return
 	}
 
-	player.wantsToStop = false
+	player.markPlaying()
 	nowPlaying := player.NowPlaying()
 	helper.ChanMsg(player.Client, nowPlaying)
 	helper.SetComment(player.Client, nowPlaying)
-	player.WaitForStop()
+	go player.WaitForStop()
 }
 
 func (player *Player) NowPlaying() string {
@@ -190,16 +228,19 @@ func (player *Player) NowPlaying() string {
 	return output
 }
 
-func (player *Player) Stop(wantsToStop bool) {
-	player.wantsToStop = wantsToStop
-	if player.IsPlaying() {
-		player.stream.Stop() //#nosec G104 -- Only error this will respond with is stream not playing.
+func (player *Player) Stop(shouldStop bool) {
+	if shouldStop {
+		player.requestStop()
+	} else {
+		player.markStopped()
+	}
+
+	if player.stream != nil {
+		player.ensureStreamStopped()
 		helper.SetComment(player.Client, "Not Playing.")
-		player.stream.Wait() // This may help alleviate issues as descried below
-		if player.IsPlaying() && player.wantsToStop {
-			// There have been some occasions where another stream begins and turns into a garbled
-			// mess. Hopefully at some point we'll catch it and determine if it's our fault.
-			log.Println("WARNING: Racey stop condition, should have stopped but didn't?.")
+
+		if !player.waitForActualStop(3 * time.Second) {
+			log.Println("WARNING: Stream did not stop properly within timeout")
 		}
 	}
 }
@@ -247,4 +288,55 @@ func (player *Player) SetVolume(value float32) {
 	if player.stream != nil {
 		player.stream.Volume = value
 	}
+}
+
+// markPlaying marks the player as actively playing
+func (player *Player) markPlaying() {
+	player.mu.Lock()
+	defer player.mu.Unlock()
+
+	// Reset context for new playback session
+	if player.stopCtx.Err() != nil {
+		player.stopCtx, player.stopCancel = context.WithCancel(context.Background())
+	}
+	player.isPlaying = true
+}
+
+// requestStop signals that playback should stop
+func (player *Player) requestStop() {
+	player.mu.Lock()
+	defer player.mu.Unlock()
+	player.isPlaying = false
+	player.stopCancel()
+}
+
+// markStopped marks the player as stopped without requesting a stop
+func (player *Player) markStopped() {
+	player.mu.Lock()
+	defer player.mu.Unlock()
+	player.isPlaying = false
+}
+
+// ensureStreamStopped aggressively stops the stream if it's running
+func (player *Player) ensureStreamStopped() {
+	if player.stream != nil && player.stream.State() == gumbleffmpeg.StatePlaying {
+		player.stream.Stop() //#nosec G104 -- Only error this will respond with is stream not playing.
+	}
+}
+
+// waitForActualStop waits for the stream to actually stop for the supplied timeout
+func (player *Player) waitForActualStop(timeout time.Duration) bool {
+	if player.stream == nil {
+		return true
+	}
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if player.stream.State() == gumbleffmpeg.StateStopped {
+			return true
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	return player.stream.State() == gumbleffmpeg.StateStopped
 }
