@@ -17,6 +17,7 @@ import (
 
 // IsWhiteListedURL returns true if URL begins with an acceptable URL for ytdl
 func IsWhiteListedURL(url string) bool {
+	// ! Don't forget to end url with / !
 	whiteListedURLS := []string{"https://www.youtube.com/", "https://music.youtube.com/", "https://youtu.be/", "https://soundcloud.com/"}
 	for i := range whiteListedURLS {
 		if strings.HasPrefix(url, whiteListedURLS[i]) {
@@ -89,13 +90,15 @@ func GetYtDLThumbnail(url string) string {
 		jpegURL = strings.Replace(jpegURL, "_webp", "", 1)
 		
 		// Test if the JPEG URL exists
+		// #nosec G107 -- thumbnailURL is from yt-dlp for a whitelisted video, considered safe
 		resp, err := http.Head(jpegURL)
 		if err == nil && resp.StatusCode == http.StatusOK {
 			thumbnailURL = jpegURL
 		}
 	}
 	
-	// Download the thumbnail
+	// Download the thumbnail		
+	// #nosec G107
 	resp, err := http.Get(thumbnailURL)
 	if err != nil {
 		log.Println("Failed to download thumbnail from", thumbnailURL, ":", err)
