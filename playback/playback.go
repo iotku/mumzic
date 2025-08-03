@@ -210,10 +210,18 @@ func (player *Player) Play(path string) {
 }
 
 func (player *Player) NowPlaying() string {
-	artPath := messages.FindCoverArtPath(player.Playlist.GetCurrentPath())
+	currentPath := player.Playlist.GetCurrentPath()
 	var artImg, output string
-	if artPath != "" {
-		artImg = messages.GenerateCoverArtImg(artPath)
+	
+	// Check if it's a YouTube URL
+	if strings.HasPrefix(currentPath, "http") {
+		artImg = youtubedl.GetYtDLThumbnail(currentPath)
+	} else {
+		// For local files, use the existing cover art logic
+		artPath := messages.FindCoverArtPath(currentPath)
+		if artPath != "" {
+			artImg = messages.GenerateCoverArtImg(artPath)
+		}
 	}
 
 	output = " <h2><u>Now Playing</u></h2><table><tr><td>" + artImg + "</td><td>" + "<table><tr><td>" +
