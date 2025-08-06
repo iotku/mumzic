@@ -8,4 +8,4 @@ require (
 	layeh.com/gumble v0.0.0-20200818122324-146f9205029b
 )
 
-replace layeh.com/gumble v0.0.0-20200818122324-146f9205029b => github.com/iotku/gumble v0.0.1
+replace layeh.com/gumble => github.com/iotku/gumble v0.0.2-0.20250806032043-f12b7e79b99e

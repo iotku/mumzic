@@ -1,11 +1,11 @@
 github.com/dchote/go-openal v0.0.0-20171116030048-f4a9a141d372/go.mod h1:74z+CYu2/mx4N+mcIS/rsvfAxBPBV9uv8zRAnwyFkdI=
 github.com/golang/protobuf v1.3.1 h1:YF8+flBXS5eO826T4nzqPrxfhQThhXl0YzfuUPu4SBg=
 github.com/golang/protobuf v1.3.1/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
-github.com/iotku/gumble v0.0.1 h1:b1mhMtKX+qDL7eCP4PzN0ZIOysCGcmZcYmvsWgFO2oM=
-github.com/iotku/gumble v0.0.1/go.mod h1:tWPVA9ZAfImNwabjcd9uDE+Mtz0Hfs7a7G3vxrnrwyc=
+github.com/iotku/gumble v0.0.2-0.20250806032043-f12b7e79b99e h1:AOy3PdJJrSI47P1MbpMEUtk85/mlSX81eiPmQiINOs8=
+github.com/iotku/gumble v0.0.2-0.20250806032043-f12b7e79b99e/go.mod h1:oTCNWUtY3DjZmwoEL4JQxMbvxadj2zP5QQq9ppGhNF8=
 github.com/mattn/go-sqlite3 v1.14.30 h1:bVreufq3EAIG1Quvws73du3/QgdeZ3myglJlrzSYYCY=
 github.com/mattn/go-sqlite3 v1.14.30/go.mod h1:Uh1q+B4BYcTPb+yiD3kU8Ct7aC0hY9fxUwlHK0RXw+Y=
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 h1:zYyBkD/k9seD2A7fsi6Oo2LfFZAehjjQMERAvZLEDnQ=
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646/go.mod h1:jpp1/29i3P1S/RLdc7JQKbRpFeM1dOBd8T9ki5s+AY8=
-layeh.com/gopus v0.0.0-20161224163843-0ebf989153aa h1:WNU4LYsgD2UHxgKgB36mL6iMAMOvr127alafSlgBbiA=
-layeh.com/gopus v0.0.0-20161224163843-0ebf989153aa/go.mod h1:AOef7vHz0+v4sWwJnr0jSyHiX/1NgsMoaxl+rEPz/I0=
+gopkg.in/hraban/opus.v2 v2.0.0-20230925203106-0188a62cb302 h1:xeVptzkP8BuJhoIjNizd2bRHfq9KB9HfOLZu90T04XM=
+gopkg.in/hraban/opus.v2 v2.0.0-20230925203106-0188a62cb302/go.mod h1:/L5E7a21VWl8DeuCPKxQBdVG5cy+L0MRZ08B1wnqt7g=
