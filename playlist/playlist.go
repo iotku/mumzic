@@ -143,7 +143,7 @@ func (list *List) AddToQueue(path string) (string, error) {
 	human, path, err := getHumanAndPath(path) // Note: we check for whitelist urls here
 	if err != nil {
 		return "", err
-	} else if err != nil || path == "" {
+	} else if path == "" {
 		return "", errors.New("nothing added. (Invalid ID?)")
 	}
 
