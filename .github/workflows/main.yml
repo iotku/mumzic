@@ -1,3 +1,5 @@
+permissions:
+  contents: read
 name: Run Gosec
 on:
   push:
