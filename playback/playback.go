@@ -168,7 +168,7 @@ func (player *Player) WaitForStop() {
 	}
 
 	if player.IsRadio {
-		_, err := player.Playlist.AddNext(strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
+		err := player.Playlist.AddNext(strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
 		if err != nil {
 			helper.ChanMsg(player.Client, "<b style=\"color:red\">Error Adding Radio Track: </b>"+err.Error())
 			log.Println("Radio failed to Playlist.AddNext a random track ID, stale database?: ", err)
@@ -212,7 +212,7 @@ func (player *Player) Play(path string) {
 func (player *Player) NowPlaying() string {
 	currentPath := player.Playlist.GetCurrentPath()
 	var artImg, output string
-	
+
 	// Check if it's a YouTube URL
 	if strings.HasPrefix(currentPath, "http") {
 		artImg = youtubedl.GetYtDLThumbnail(currentPath)
