@@ -157,14 +157,14 @@ func (list *List) AddToQueue(path string) (string, error) {
 }
 
 // AddNext adds a song to play directly after the current song in the Playlist
-func (list *List) AddNext(arg string) (bool, error) {
+func (list *List) AddNext(arg string) error {
 	human, path, err := getHumanAndPath(arg)
 	if err != nil {
-		return false, err
+		return err
 	}
 	if list.Count() <= 1 || !list.HasNext() {
 		list.pAdd(path, human)
-		return true, nil
+		return nil
 	}
 
 	var newList [][]string
@@ -176,7 +176,7 @@ func (list *List) AddNext(arg string) (bool, error) {
 	list.Playlist = newList
 	list.Position = 0
 
-	return true, nil
+	return nil
 }
 
 func getHumanAndPath(arg string) (human, path string, err error) {
