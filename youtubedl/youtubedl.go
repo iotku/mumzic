@@ -33,7 +33,7 @@ func init() {
 
 // loadAllowedURLPrefixesFromFile loads prefixes from each line of a provided txt file
 func loadAllowedURLPrefixesFromFile(path string) error {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G402
 	if err != nil {
 		return err
 	}
