@@ -1,13 +1,16 @@
 package youtubedl
 
 import (
+	"bufio"
 	"bytes"
+	_ "embed"
 	"encoding/base64"
 	"image"
 	"image/jpeg"
 	_ "image/png"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -15,12 +18,61 @@ import (
 	"layeh.com/gumble/gumbleffmpeg"
 )
 
+// ! Don't forget to end url prefix with / !
+var AllowedURLPrefixes []string
+var whitelistFile = "whitelist.txt"
+
+func init() {
+	err := loadAllowedURLPrefixesFromFile(whitelistFile)
+	if err != nil {
+		log.Printf("failed to load allowed URLs: %v", err)
+	}
+
+	log.Printf("Allowed URL prefixes: %v", AllowedURLPrefixes)
+}
+
+// loadAllowedURLPrefixesFromFile loads prefixes from each line of a provided txt file
+func loadAllowedURLPrefixesFromFile(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return scanURLPrefixes(bufio.NewScanner(f))
+}
+
+func scanURLPrefixes(scanner *bufio.Scanner) error {
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") { // Ignore # comments
+			continue
+		}
+
+		if !strings.HasPrefix(line, "http://") && !strings.HasPrefix(line, "https://") {
+			log.Println("Invalid entry (" + line + ") must start with http:// or https:// ")
+			continue
+		}
+
+		if !strings.HasSuffix(line, "/") {
+			line += "/" // enforce trailing / to avoid subdomain bypass
+		}
+
+		AllowedURLPrefixes = append(AllowedURLPrefixes, line)
+
+	}
+
+	return scanner.Err()
+}
+
 // IsWhiteListedURL returns true if URL begins with an acceptable URL for ytdl
 func IsWhiteListedURL(url string) bool {
-	// ! Don't forget to end url with / !
-	whiteListedURLS := []string{"https://www.youtube.com/", "https://music.youtube.com/", "https://youtu.be/", "https://soundcloud.com/"}
-	for i := range whiteListedURLS {
-		if strings.HasPrefix(url, whiteListedURLS[i]) {
+	if len(AllowedURLPrefixes) == 0 {
+		log.Println("IsWhiteListedURL was called, but there are no allowedURLPrefixes")
+	}
+
+	for _, prefix := range AllowedURLPrefixes {
+		if strings.HasPrefix(url, prefix) {
 			return true
 		}
 	}
@@ -37,12 +89,12 @@ func SearchYouTube(query string) string {
 		log.Println("Youtube-DL failed to search for:", query)
 		return ""
 	}
-	
+
 	videoID := strings.TrimSpace(output.String())
 	if videoID == "" {
 		return ""
 	}
-	
+
 	// Convert video ID to full YouTube URL
 	return "https://www.youtube.com/watch?v=" + videoID
 }
@@ -65,7 +117,7 @@ func GetYtDLSource(url string) gumbleffmpeg.Source {
 
 // GetYtDLThumbnail fetches the thumbnail for a YouTube video and returns it as base64-encoded data
 func GetYtDLThumbnail(url string) string {
-	
+
 	// get the thumbnail URL using yt-dlp
 	ytDL := exec.Command("yt-dlp", "--no-playlist", "--get-thumbnail", url)
 	var output bytes.Buffer
@@ -75,20 +127,20 @@ func GetYtDLThumbnail(url string) string {
 		log.Println("Youtube-DL failed to get thumbnail URL for", url, ":", err)
 		return ""
 	}
-	
+
 	thumbnailURL := strings.TrimSpace(output.String())
 	if thumbnailURL == "" {
 		log.Println("No thumbnail URL found for", url)
 		return ""
 	}
-	
+
 	// If the URL is WebP, try to get a JPEG version instead
 	if strings.Contains(thumbnailURL, ".webp") {
 		// Try to get a different thumbnail format by modifying the URL
 		// YouTube thumbnails often have multiple formats available
 		jpegURL := strings.Replace(thumbnailURL, ".webp", ".jpg", 1)
 		jpegURL = strings.Replace(jpegURL, "_webp", "", 1)
-		
+
 		// Test if the JPEG URL exists
 		// #nosec G107 -- thumbnailURL is from yt-dlp for a whitelisted video, considered safe
 		resp, err := http.Head(jpegURL)
@@ -96,8 +148,8 @@ func GetYtDLThumbnail(url string) string {
 			thumbnailURL = jpegURL
 		}
 	}
-	
-	// Download the thumbnail		
+
+	// Download the thumbnail
 	// #nosec G107
 	resp, err := http.Get(thumbnailURL)
 	if err != nil {
@@ -105,28 +157,28 @@ func GetYtDLThumbnail(url string) string {
 		return ""
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		log.Println("Failed to download thumbnail, status:", resp.StatusCode)
 		return ""
 	}
-	
+
 	// Decode the image
 	img, _, err := image.Decode(resp.Body)
 	if err != nil {
 		log.Println("Failed to decode thumbnail image:", err)
 		return ""
 	}
-	
+
 	// Resize the image to 100x100 like local cover art for consistency, possible change it later
 	resizedImg := resize.Resize(100, 100, img, resize.Lanczos3)
-	
+
 	// Compress
 	jpegQuality := 60
 	maxSize := 4000
 	var buf bytes.Buffer
 	var encodedStr string
-	
+
 	for maxSize >= 4000 && jpegQuality > 0 {
 		buf.Reset()
 		options := jpeg.Options{Quality: jpegQuality}
@@ -138,11 +190,11 @@ func GetYtDLThumbnail(url string) string {
 		maxSize = len(encodedStr)
 		jpegQuality -= 10
 	}
-	
+
 	// Check if the image is too large
 	if len(encodedStr) > 4850 { // MaxMessageLengthWithoutImage-150 = 5000-150 = 4850
 		return "" // Don't return thumbnail it's too big
 	}
-	
+
 	return encodedStr
 }
