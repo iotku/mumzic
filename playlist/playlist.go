@@ -182,10 +182,7 @@ func (list *List) AddNext(arg string) error {
 func getHumanAndPath(arg string) (human, path string, err error) {
 	path = helper.StripHTMLTags(arg)
 	if strings.HasPrefix(path, "http") && youtubedl.IsWhiteListedURL(path) == true {
-		human = youtubedl.GetYtDLTitle(path)
-		if human == "" {
-			human = path
-		}
+		human, err = youtubedl.GetYtDLTitle(path)
 		return
 	} else if strings.HasPrefix(path, "http") {
 		return "", "", errors.New("URL Doesn't meet whitelist")
@@ -200,13 +197,9 @@ func getHumanAndPath(arg string) (human, path string, err error) {
 	}
 
 	// If not a valid ID, try YouTube search
-	searchURL := youtubedl.SearchYouTube(arg)
-	if searchURL != "" {
-		human = youtubedl.GetYtDLTitle(searchURL)
-		if human == "" {
-			human = arg
-		}
-		path = searchURL
+	path, err = youtubedl.SearchYouTube(arg)
+	if err != nil {
+		human, _ = youtubedl.GetYtDLTitle(path)
 		return
 	}
 

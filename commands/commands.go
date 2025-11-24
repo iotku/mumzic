@@ -126,15 +126,6 @@ func joinUserChannel(player *playback.Player, sender string) {
 	}
 }
 
-func addSongToQueue(player *playback.Player, id string) (string, error) {
-	human, err := player.Playlist.AddToQueue(id)
-	if err != nil {
-		return "", err
-	}
-
-	return human, nil
-}
-
 func getCommandAndArg(msg, name string, conf *config.Config) (command, arg string) {
 	var skipUserName = 0
 	msg = strings.TrimSpace(msg)
@@ -165,7 +156,7 @@ func play(id string, sender string, isPrivate bool, player *playback.Player) {
 		playNext = true
 	}
 
-	human, err := addSongToQueue(player, id)
+	human, err := player.Playlist.AddToQueue(id)
 	if err != nil {
 		helper.MsgDispatch(player.Client, isPrivate, sender, err.Error())
 		return
