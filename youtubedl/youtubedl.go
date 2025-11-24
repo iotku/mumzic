@@ -1,13 +1,16 @@
 package youtubedl
 
 import (
+	"bufio"
 	"bytes"
+	_ "embed"
 	"encoding/base64"
 	"image"
 	"image/jpeg"
 	_ "image/png"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -15,12 +18,61 @@ import (
 	"layeh.com/gumble/gumbleffmpeg"
 )
 
+// ! Don't forget to end url prefix with / !
+var AllowedURLPrefixes []string
+var whitelistFile = "whitelist.txt"
+
+func init() {
+	err := loadAllowedURLPrefixesFromFile(whitelistFile)
+	if err != nil {
+		log.Printf("failed to load allowed URLs: %v", err)
+	}
+
+	log.Printf("Allowed URL prefixes: %v", AllowedURLPrefixes)
+}
+
+// loadAllowedURLPrefixesFromFile loads prefixes from each line of a provided txt file
+func loadAllowedURLPrefixesFromFile(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return scanURLPrefixes(bufio.NewScanner(f))
+}
+
+func scanURLPrefixes(scanner *bufio.Scanner) error {
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") { // Ignore # comments
+			continue
+		}
+
+		if !strings.HasPrefix(line, "http://") && !strings.HasPrefix(line, "https://") {
+			log.Println("Invalid entry (" + line + ") must start with http:// or https:// ")
+			continue
+		}
+
+		if !strings.HasSuffix(line, "/") {
+			line += "/" // enforce trailing / to avoid subdomain bypass
+		}
+
+		AllowedURLPrefixes = append(AllowedURLPrefixes, line)
+
+	}
+
+	return scanner.Err()
+}
+
 // IsWhiteListedURL returns true if URL begins with an acceptable URL for ytdl
 func IsWhiteListedURL(url string) bool {
-	// ! Don't forget to end url with / !
-	whiteListedURLS := []string{"https://www.youtube.com/", "https://music.youtube.com/", "https://youtu.be/", "https://soundcloud.com/"}
-	for i := range whiteListedURLS {
-		if strings.HasPrefix(url, whiteListedURLS[i]) {
+	if len(AllowedURLPrefixes) == 0 {
+		log.Println("IsWhiteListedURL was called, but there are no allowedURLPrefixes")
+	}
+
+	for _, prefix := range AllowedURLPrefixes {
+		if strings.HasPrefix(url, prefix) {
 			return true
 		}
 	}
