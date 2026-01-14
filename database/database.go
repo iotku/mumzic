@@ -2,8 +2,9 @@ package database
 
 import (
 	"database/sql"
-	"github.com/iotku/mumzic/config"
 	"os"
+
+	"github.com/iotku/mumzic/config"
 )
 
 var SongDB *sql.DB
@@ -37,5 +38,7 @@ func checkErrPanic(err error) {
 }
 
 func Close() {
-	checkErrPanic(SongDB.Close())
+	if SongDB != nil {
+		checkErrPanic(SongDB.Close())
+	}
 }
