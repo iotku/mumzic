@@ -5,6 +5,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/base64"
+	"errors"
 	"image"
 	"image/jpeg"
 	_ "image/png"
@@ -80,35 +81,36 @@ func IsWhiteListedURL(url string) bool {
 }
 
 // SearchYouTube searches for a video on YouTube using yt-dlp and returns the first result URL
-func SearchYouTube(query string) string {
+func SearchYouTube(query string) (string, error) {
+	if !IsWhiteListedURL("https://youtube.com") {
+		return "", errors.New("YouTube is not whitelisted")
+	}
 	ytDL := exec.Command("yt-dlp", "--no-playlist", "--get-id", "--default-search", "ytsearch1", query)
 	var output bytes.Buffer
 	ytDL.Stdout = &output
 	err := ytDL.Run()
 	if err != nil {
-		log.Println("Youtube-DL failed to search for:", query)
-		return ""
+		return "", errors.New("YouTube search failed for: " + query)
 	}
 
 	videoID := strings.TrimSpace(output.String())
 	if videoID == "" {
-		return ""
+		return "", errors.New("YouTube search found no results")
 	}
 
 	// Convert video ID to full YouTube URL
-	return "https://www.youtube.com/watch?v=" + videoID
+	return "https://www.youtube.com/watch?v=" + videoID, nil
 }
 
-func GetYtDLTitle(url string) string {
+func GetYtDLTitle(url string) (string, error) {
 	ytDL := exec.Command("yt-dlp", "--no-playlist", "-e", url)
 	var output bytes.Buffer
 	ytDL.Stdout = &output
 	err := ytDL.Run()
 	if err != nil {
-		log.Println("Youtube-DL failed to get title for", url)
-		return ""
+		return url, errors.New("YDL failed to get title for: " + url)
 	}
-	return output.String()
+	return output.String(), nil
 }
 
 func GetYtDLSource(url string) gumbleffmpeg.Source {
