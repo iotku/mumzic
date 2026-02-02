@@ -4,9 +4,31 @@ WIP
 
 ## Getting Started
 
-### Building
-Base Reqirements: go / ffmpeg / yt-dlp / sqlite3
+### Dependencies
 
+Base Reqirements: go / ffmpeg / yt-dlp / sqlite3 
+
+#### 2026 Update: 
+
+We now require opus development headers to build with https://github.com/hraban/opus/tree/v2
+
+Development Headers: opus / opusfile
+
+Build tools: pkg-config
+
+Debian, Ubuntu, ...:
+```sh
+sudo apt-get install pkg-config libopus-dev libopusfile-dev
+```
+
+Mac:
+```sh
+brew install pkg-config opus opusfile
+```
+
+Windows: Consider using Docker or WSL Ubuntu.
+
+### Building 
 Until I can figure out modifying modules properly
 
 `$ git clone https://github.com/iotku/mumzic/`
@@ -20,6 +42,20 @@ You can `go build` which should pull in my modified gumble which has stereo supp
 For additional options (such as setting the **username** or **password**), see `mumzic -help`
 
 Note: Here we used the `-insecure` flag, to (hopefully) avoid the pain that comes with setting up certificates
+
+    - Currently we don't check for credentials in the `.env` file when running directly
+
+### Docker Compose
+
+In the root directory:
+
+Modify `.env` with server information and credentials.
+
+``` docker compose up ```
+
+Use `--build` to rebuild the image.
+
+See docker-compose.yml if you want to enable bindings for a local media.db
 
 ### Usage / Commands
 See [usage.md](https://github.com/iotku/mumzic/blob/master/USAGE.md)
