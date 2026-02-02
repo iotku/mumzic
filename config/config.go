@@ -35,7 +35,11 @@ func init() {
 }
 
 func CloseDatabase() {
-	checkErrPanic(database.Close())
+	if database != nil {
+		checkErrPanic(database.Close())
+	} else {
+		log.Println("Tried Closing nil database")
+	}
 }
 
 func NewConfig(hostname string) *Config {

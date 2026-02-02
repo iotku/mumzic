@@ -2,8 +2,12 @@ package main
 
 import (
 	"flag"
-	"github.com/iotku/mumzic/database"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/iotku/mumzic/database"
 
 	"github.com/iotku/mumzic/commands"
 	"github.com/iotku/mumzic/config"
@@ -17,6 +21,31 @@ func main() {
 	var channelPlayer *playback.Player
 	var bConfig *config.Config
 	var hostname, username string
+
+	cleanUp := func() {
+		if bConfig != nil {
+			bConfig.Channel = channelPlayer.Client.Self.Channel.Name
+			bConfig.Save()
+		}
+
+		if channelPlayer != nil {
+			channelPlayer.Playlist.Save(bConfig.Hostname)
+		}
+		config.CloseDatabase()
+		database.Close()
+	}
+
+	// Capture shutdown signal (ctrl+c)
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-sigCh
+		log.Println("Received shutdown signal")
+		cleanUp()
+		os.Exit(0)
+	}()
+
 	gumbleutil.Main(gumbleutil.AutoBitrate, gumbleutil.Listener{
 		Connect: func(e *gumble.ConnectEvent) {
 			hostname = getValueFromFlag(flag.Lookup("server"))
@@ -52,11 +81,7 @@ func main() {
 		},
 		Disconnect: func(e *gumble.DisconnectEvent) {
 			log.Println("Disconnecting: ", e.Type)
-			bConfig.Channel = channelPlayer.Client.Self.Channel.Name
-			bConfig.Save()
-			channelPlayer.Playlist.Save(bConfig.Hostname)
-			config.CloseDatabase()
-			database.Close()
+			cleanUp()
 		},
 	})
 }
