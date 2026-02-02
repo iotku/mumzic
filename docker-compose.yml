@@ -1,10 +1,11 @@
 services:
   mumzic:
+    build: .
     image: mumzic:latest
     env_file:
       - .env
     command: ["-insecure", "-password", "${MUMZIC_PASSWORD}", "-server", "${MUMZIC_SERVER}", "-username", "${MUMZIC_USER}"]
-    volumes:
+ #   volumes:
     #  - "${HOME}/Music:/app/Music:ro" # genMusicSQLiteDB -trim="${HOME}/Music" -prefix="/app/Music" ${HOME}/Music
     #  - ./media.db:/app/media.db # <-- from genMusicSQLiteDB
       # Soon: we need to have a way to persist config.db
