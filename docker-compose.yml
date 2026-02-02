@@ -1,0 +1,8 @@
+services:
+  mumzic:
+    image: mumzic:latest
+    env_file:
+      - .env
+    command: ["-insecure", "-password", "${MUMZIC_PASSWORD}", "-server", "${MUMZIC_SERVER}", "-username", "${MUMZIC_USER}"]
+    volumes: # Need permission for local files
+      - "${HOME}/Music:/app/Music:ro"
