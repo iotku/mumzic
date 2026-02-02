@@ -21,6 +21,17 @@ Debian, Ubuntu, ...:
 sudo apt-get install pkg-config libopus-dev libopusfile-dev
 ```
 
+Fedora:
+```sh
+sudo dnf install opus-devel opusfile-devel pkgconfig
+```
+
+Bazzite (Immutable Fedora w/ Homebrew)
+```sh
+export PKG_CONFIG_PATH=$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH
+brew install pkg-config opus opusfile
+```
+
 Mac:
 ```sh
 brew install pkg-config opus opusfile
