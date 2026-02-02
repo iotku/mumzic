@@ -3,7 +3,7 @@ services:
     build: .
     image: mumzic:latest
     env_file:
-      - .env
+      - .env # copy from .env-example with server info
     command: ["-insecure", "-password", "${MUMZIC_PASSWORD}", "-server", "${MUMZIC_SERVER}", "-username", "${MUMZIC_USER}"]
  #   volumes:
     #  - "${HOME}/Music:/app/Music:ro" # genMusicSQLiteDB -trim="${HOME}/Music" -prefix="/app/Music" ${HOME}/Music

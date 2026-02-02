@@ -49,7 +49,7 @@ Note: Here we used the `-insecure` flag, to (hopefully) avoid the pain that come
 
 In the root directory:
 
-Modify `.env` with server information and credentials.
+Copy `.env-example` -> `.env` with server information and credentials.
 
 ``` docker compose up ```
 
