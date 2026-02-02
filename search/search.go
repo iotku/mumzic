@@ -3,9 +3,10 @@ package search
 import (
 	"database/sql"
 	"fmt"
+	"log"
+
 	"github.com/iotku/mumzic/database"
 	_ "github.com/mattn/go-sqlite3"
-	"log"
 )
 
 // Aggressively fail on error
@@ -56,6 +57,10 @@ func FindArtistTitle(Query string) []string {
 	Query = fmt.Sprintf("%%%s%%", Query)
 	rows := makeDbQuery("SELECT ROWID, * FROM music where (artist || \" \" || title)  LIKE ? LIMIT 25", Query)
 
+	if rows == nil { // DB was null
+		return []string{}
+	}
+
 	var rowID int
 	var artist, album, title, path string
 	var output []string
@@ -71,6 +76,11 @@ func FindArtistTitle(Query string) []string {
 
 // Helper Functions
 func makeDbQuery(query string, args ...interface{}) *sql.Rows {
+	if database.SongDB == nil {
+		log.Println("SongDB was null when making DB Query!")
+		return nil
+	}
+
 	rows, err := database.SongDB.Query(query, args...)
 	checkErrPanic(err)
 
