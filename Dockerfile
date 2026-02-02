@@ -3,10 +3,6 @@ FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
-#ENV MUMZIC_PASSWORD=password
-#ENV MUMZIC_SERVER=127.0.0.1
-#ENV MUMZIC_USER=mumzic
-
 RUN apk update && apk upgrade --no-cache
 
 RUN apk add --no-cache \
