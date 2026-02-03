@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"image"
 	"image/jpeg"
 	_ "image/png"
