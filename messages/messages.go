@@ -173,7 +173,7 @@ func FindCoverArtPath(playPath string) string {
 // TODO: Option to override limits for servers with modified settings
 func GenerateCoverArtImg(image image.Image) string {
 	resizedImg := resize.Resize(0, 100, image, resize.MitchellNetravali)
-	const textReserved = 128 // Leave some space for text for the message
+	const textReserved = 200 // Leave some space for text for the message
 	const minQual = 30
 	const maxQual = 80
 
