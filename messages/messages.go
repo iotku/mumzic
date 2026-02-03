@@ -172,26 +172,36 @@ func FindCoverArtPath(playPath string) string {
 //
 // TODO: Option to override limits for servers with modified settings
 func GenerateCoverArtImg(image image.Image) string {
-	resizedImg := resize.Resize(0, 100, image, resize.Lanczos3)
-	jpegQuality := 60
-	maxSize := 4000
+	resizedImg := resize.Resize(0, 100, image, resize.MitchellNetravali)
+	const textReserved = 128 // Leave some space for text for the message
+	const minQual = 30
+	const maxQual = 80
+
 	var buf bytes.Buffer
-	var encodedStr string
-	for maxSize >= 4000 && jpegQuality > 0 {
+	var best string
+	low, high := minQual, maxQual
+	for low <= high { // We love binary search
+		mid := (low + high) / 2 // midpoint
 		buf.Reset()
-		options := jpeg.Options{Quality: jpegQuality}
-		if err := jpeg.Encode(&buf, resizedImg, &options); err != nil {
+		if err := jpeg.Encode(&buf, resizedImg, &jpeg.Options{Quality: mid}); err != nil {
 			log.Println("Error encoding jpg in GenerateCoverArtImg: ", err)
 			return ""
 		}
-		encodedStr = "<img src=\"data:img/jpeg;base64, " + base64.StdEncoding.EncodeToString(buf.Bytes()) + "\" />"
-		maxSize = len(encodedStr)
-		jpegQuality -= 10 // Lower potential future jpegQuality if there's further passes
+		encodedStr := "<img src=\"data:img/jpeg;base64, " + base64.StdEncoding.EncodeToString(buf.Bytes()) + "\" />"
+
+		if len(encodedStr) <= MaxMessageLengthWithoutImage-textReserved {
+			best = encodedStr
+			low = mid + 1
+		} else {
+			high = mid - 1
+		}
 	}
-	if len(encodedStr) > MaxMessageLengthWithoutImage-150 {
+
+	if len(best) > MaxMessageLengthWithoutImage-textReserved {
 		return "" // Don't return album art, it's certainly too big!
 	}
-	return encodedStr
+
+	return best
 }
 
 func DecodeImage(path string) (image.Image, error) {
