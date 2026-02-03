@@ -198,7 +198,7 @@ func getHumanAndPath(arg string) (human, path string, err error) {
 
 	// If not a valid ID, try YouTube search
 	path, err = youtubedl.SearchYouTube(arg)
-	if err != nil {
+	if err == nil {
 		human, _ = youtubedl.GetYtDLTitle(path)
 		return
 	}

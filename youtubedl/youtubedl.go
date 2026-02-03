@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"image"
 	"image/jpeg"
 	_ "image/png"
@@ -82,7 +83,7 @@ func IsWhiteListedURL(url string) bool {
 
 // SearchYouTube searches for a video on YouTube using yt-dlp and returns the first result URL
 func SearchYouTube(query string) (string, error) {
-	if !IsWhiteListedURL("https://youtube.com") {
+	if !IsWhiteListedURL("https://www.youtube.com/") {
 		return "", errors.New("YouTube is not whitelisted")
 	}
 	ytDL := exec.Command("yt-dlp", "--no-playlist", "--get-id", "--default-search", "ytsearch1", query)
