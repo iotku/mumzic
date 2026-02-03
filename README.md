@@ -4,6 +4,14 @@ WIP
 
 ## Getting Started
 
+### Server Requirements
+
+For good audio quality you likely want to change the maximum bandwidth of your
+server to at least 96000 (`bandwidth=96000` in mumble-server (murmur) config).
+
+Low values might break (e.g. 32000), needs investgation but you probably want
+more quality anyways...
+
 ### Dependencies
 
 Base Reqirements: go / ffmpeg / yt-dlp / sqlite3 
