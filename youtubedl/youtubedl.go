@@ -4,18 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	_ "embed"
-	"encoding/base64"
 	"errors"
 	"image"
-	"image/jpeg"
 	_ "image/png"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
-	"github.com/nfnt/resize"
 	"layeh.com/gumble/gumbleffmpeg"
 )
 
@@ -118,22 +116,19 @@ func GetYtDLSource(url string) gumbleffmpeg.Source {
 }
 
 // GetYtDLThumbnail fetches the thumbnail for a YouTube video and returns it as base64-encoded data
-func GetYtDLThumbnail(url string) string {
-
+func GetYtDLThumbnail(url string) (image.Image, error) {
 	// get the thumbnail URL using yt-dlp
 	ytDL := exec.Command("yt-dlp", "--no-playlist", "--get-thumbnail", url)
 	var output bytes.Buffer
 	ytDL.Stdout = &output
 	err := ytDL.Run()
 	if err != nil {
-		log.Println("Youtube-DL failed to get thumbnail URL for", url, ":", err)
-		return ""
+		return nil, errors.New("Youtube-DL failed to get thumbnail URL for " + url + ": " + err.Error())
 	}
 
 	thumbnailURL := strings.TrimSpace(output.String())
 	if thumbnailURL == "" {
-		log.Println("No thumbnail URL found for", url)
-		return ""
+		return nil, errors.New("No thumbnail URL found for" + url)
 	}
 
 	// If the URL is WebP, try to get a JPEG version instead
@@ -155,48 +150,19 @@ func GetYtDLThumbnail(url string) string {
 	// #nosec G107
 	resp, err := http.Get(thumbnailURL)
 	if err != nil {
-		log.Println("Failed to download thumbnail from", thumbnailURL, ":", err)
-		return ""
+		return nil, errors.New("Failed to download thumbnail from" + thumbnailURL + ": " + err.Error())
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Println("Failed to download thumbnail, status:", resp.StatusCode)
-		return ""
+		return nil, errors.New("Failed to download thumbnail, status: " + strconv.Itoa(resp.StatusCode))
 	}
 
 	// Decode the image
 	img, _, err := image.Decode(resp.Body)
 	if err != nil {
-		log.Println("Failed to decode thumbnail image:", err)
-		return ""
+		return nil, errors.New("Failed to decode thumbnail image:" + err.Error())
 	}
 
-	// Resize the image to 100x100 like local cover art for consistency, possible change it later
-	resizedImg := resize.Resize(100, 100, img, resize.Lanczos3)
-
-	// Compress
-	jpegQuality := 60
-	maxSize := 4000
-	var buf bytes.Buffer
-	var encodedStr string
-
-	for maxSize >= 4000 && jpegQuality > 0 {
-		buf.Reset()
-		options := jpeg.Options{Quality: jpegQuality}
-		if err := jpeg.Encode(&buf, resizedImg, &options); err != nil {
-			log.Println("Error encoding jpg for base64:", err)
-			return ""
-		}
-		encodedStr = "<img src=\"data:image/jpeg;base64, " + base64.StdEncoding.EncodeToString(buf.Bytes()) + "\" />"
-		maxSize = len(encodedStr)
-		jpegQuality -= 10
-	}
-
-	// Check if the image is too large
-	if len(encodedStr) > 4850 { // MaxMessageLengthWithoutImage-150 = 5000-150 = 4850
-		return "" // Don't return thumbnail it's too big
-	}
-
-	return encodedStr
+	return img, nil
 }

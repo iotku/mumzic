@@ -166,16 +166,13 @@ func FindCoverArtPath(playPath string) string {
 
 // GenerateCoverArtImg creates a base64 encoded html <img>
 // TODO: Find a way to get generated cover art to follow the larger limits (for messages that contain images)
-//       for now, we make sure the image is less than maxSize to be well below the 5000 text limit the mumble server
-//       imposes by default for text messages (that contain no image)
+//
+//	for now, we make sure the image is less than maxSize to be well below the 5000 text limit the mumble server
+//	imposes by default for text messages (that contain no image)
+//
 // TODO: Option to override limits for servers with modified settings
-func GenerateCoverArtImg(path string) string {
-	img, err := decodeImage(path)
-	if err != nil {
-		log.Println("Failed to decode img: ", path, " ", err)
-		return ""
-	}
-	resizedImg := resize.Resize(100, 100, img, resize.Lanczos3)
+func GenerateCoverArtImg(image image.Image) string {
+	resizedImg := resize.Resize(100, 100, image, resize.Lanczos3)
 	jpegQuality := 60
 	maxSize := 4000
 	var buf bytes.Buffer
@@ -184,7 +181,7 @@ func GenerateCoverArtImg(path string) string {
 		buf.Reset()
 		options := jpeg.Options{Quality: jpegQuality}
 		if err := jpeg.Encode(&buf, resizedImg, &options); err != nil {
-			log.Println("Error encoding jpg for base64: ", path, " ", err)
+			log.Println("Error encoding jpg in GenerateCoverArtImg: ", err)
 			return ""
 		}
 		encodedStr = "<img src=\"data:img/jpeg;base64, " + base64.StdEncoding.EncodeToString(buf.Bytes()) + "\" />"
@@ -197,7 +194,7 @@ func GenerateCoverArtImg(path string) string {
 	return encodedStr
 }
 
-func decodeImage(path string) (image.Image, error) {
+func DecodeImage(path string) (image.Image, error) {
 	// File path is currently controlled by song database which is considered a trusted source of information
 	// This /should/ not change, but extra contingencies may be necessary if we start getting images from external sources
 	// which could potentially have troublesome arbitrary filenames

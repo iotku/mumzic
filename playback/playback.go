@@ -3,6 +3,7 @@ package playback
 import (
 	"context"
 	"errors"
+	"image"
 	"log"
 	"os"
 	"strconv"
@@ -213,15 +214,23 @@ func (player *Player) NowPlaying() string {
 	currentPath := player.Playlist.GetCurrentPath()
 	var artImg, output string
 
-	// Check if it's a YouTube URL
-	if strings.HasPrefix(currentPath, "http") {
-		artImg = youtubedl.GetYtDLThumbnail(currentPath)
-	} else {
-		// For local files, use the existing cover art logic
-		artPath := messages.FindCoverArtPath(currentPath)
-		if artPath != "" {
-			artImg = messages.GenerateCoverArtImg(artPath)
+	var img image.Image
+	var err error
+	if strings.HasPrefix(currentPath, "http") { // ytdlp thumbnail
+		img, err = youtubedl.GetYtDLThumbnail(currentPath)
+	} else { // Local files
+		coverArtPath := messages.FindCoverArtPath(currentPath)
+		if coverArtPath != "" {
+			img, err = messages.DecodeImage(coverArtPath)
 		}
+	}
+
+	if img != nil {
+		artImg = messages.GenerateCoverArtImg(img)
+	}
+
+	if err != nil {
+		log.Println("Could not generate thumbnail: " + err.Error())
 	}
 
 	output = " <h2><u>Now Playing</u></h2><table><tr><td>" + artImg + "</td><td>" + "<table><tr><td>" +
