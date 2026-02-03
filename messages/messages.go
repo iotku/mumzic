@@ -172,7 +172,7 @@ func FindCoverArtPath(playPath string) string {
 //
 // TODO: Option to override limits for servers with modified settings
 func GenerateCoverArtImg(image image.Image) string {
-	resizedImg := resize.Resize(100, 100, image, resize.Lanczos3)
+	resizedImg := resize.Resize(0, 100, image, resize.Lanczos3)
 	jpegQuality := 60
 	maxSize := 4000
 	var buf bytes.Buffer
