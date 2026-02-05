@@ -128,7 +128,7 @@ func GetYtDLThumbnail(url string) (image.Image, error) {
 
 	thumbnailURL := strings.TrimSpace(output.String())
 	if thumbnailURL == "" {
-		return nil, errors.New("No thumbnail URL found for" + url)
+		return nil, errors.New("No thumbnail URL found for " + url)
 	}
 
 	// If the URL is WebP, try to get a JPEG version instead
@@ -150,7 +150,7 @@ func GetYtDLThumbnail(url string) (image.Image, error) {
 	// #nosec G107
 	resp, err := http.Get(thumbnailURL)
 	if err != nil {
-		return nil, errors.New("Failed to download thumbnail from" + thumbnailURL + ": " + err.Error())
+		return nil, errors.New("Failed to download thumbnail from " + thumbnailURL + ": " + err.Error())
 	}
 	defer resp.Body.Close()
 
@@ -161,7 +161,7 @@ func GetYtDLThumbnail(url string) (image.Image, error) {
 	// Decode the image
 	img, _, err := image.Decode(resp.Body)
 	if err != nil {
-		return nil, errors.New("Failed to decode thumbnail image:" + err.Error())
+		return nil, errors.New("Failed to decode thumbnail image: " + err.Error())
 	}
 
 	return img, nil
