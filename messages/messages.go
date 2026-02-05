@@ -3,6 +3,7 @@ package messages
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -14,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/iotku/mumzic/config"
+	"github.com/iotku/mumzic/youtubedl"
 	"github.com/nfnt/resize"
 )
 
@@ -205,6 +207,10 @@ func GenerateCoverArtImg(image image.Image) string {
 }
 
 func DecodeImage(path string) (image.Image, error) {
+	if path == "" {
+		return nil, errors.New("No path specified.")
+	}
+
 	// File path is currently controlled by song database which is considered a trusted source of information
 	// This /should/ not change, but extra contingencies may be necessary if we start getting images from external sources
 	// which could potentially have troublesome arbitrary filenames
@@ -224,4 +230,42 @@ func DecodeImage(path string) (image.Image, error) {
 	}
 
 	return img, nil
+}
+
+func NowPlaying(path, human string, isRadioMode bool, count int) string {
+	var artImg string
+	var img image.Image
+	var err error
+	if strings.HasPrefix(path, "http") { // ytdlp thumbnail
+		img, err = youtubedl.GetYtDLThumbnail(path)
+	} else { // Local files
+		img, err = DecodeImage(FindCoverArtPath(path))
+	}
+
+	if img != nil {
+		artImg = GenerateCoverArtImg(img)
+	}
+
+	if err != nil {
+		log.Println("Could not generate thumbnail: " + err.Error())
+	}
+
+	var b strings.Builder
+	b.Grow(MaxMessageLengthWithoutImage)
+
+	b.WriteString(`<h2><u>Now Playing</u></h2><table><tr><td>`)
+	b.WriteString(artImg)
+	b.WriteString(`</td><td><table><tr><td>`)
+	b.WriteString(human)
+	b.WriteString(`</td></tr>`)
+
+	if isRadioMode {
+		b.WriteString(`<tr><td><b>Radio</b> Mode: <b>Enabled</b></td></tr><tr>`)
+	} else {
+		fmt.Fprintf(&b, `<tr><td><b>%d</b> songs queued</td></tr>`, count)
+	}
+
+	b.WriteString(`</table></td></tr></table>`)
+
+	return b.String()
 }

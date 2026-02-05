@@ -3,7 +3,6 @@ package playback
 import (
 	"context"
 	"errors"
-	"image"
 	"log"
 	"os"
 	"strconv"
@@ -212,37 +211,11 @@ func (player *Player) Play(path string) {
 
 func (player *Player) NowPlaying() string {
 	currentPath := player.Playlist.GetCurrentPath()
-	var artImg, output string
+	currentHuman := player.Playlist.GetCurrentHuman()
+	isRadio := player.IsRadio
+	count := player.Playlist.Count()
 
-	var img image.Image
-	var err error
-	if strings.HasPrefix(currentPath, "http") { // ytdlp thumbnail
-		img, err = youtubedl.GetYtDLThumbnail(currentPath)
-	} else { // Local files
-		coverArtPath := messages.FindCoverArtPath(currentPath)
-		if coverArtPath != "" {
-			img, err = messages.DecodeImage(coverArtPath)
-		}
-	}
-
-	if img != nil {
-		artImg = messages.GenerateCoverArtImg(img)
-	}
-
-	if err != nil {
-		log.Println("Could not generate thumbnail: " + err.Error())
-	}
-
-	output = " <h2><u>Now Playing</u></h2><table><tr><td>" + artImg + "</td><td>" + "<table><tr><td>" +
-		player.Playlist.GetCurrentHuman() + "</td></tr>"
-	if player.IsRadio {
-		output += "<tr><td><b>Radio</b> Mode: <b>Enabled</b></td></tr><tr>"
-	} else {
-		output += "<tr><td><b>" + strconv.Itoa(player.Playlist.Count()) + "</b> songs queued</td></tr>"
-	}
-	output += "</table>" + "</td></tr></table>"
-
-	return output
+	return messages.NowPlaying(currentPath, currentHuman, isRadio, count)
 }
 
 func (player *Player) Stop(shouldStop bool) {

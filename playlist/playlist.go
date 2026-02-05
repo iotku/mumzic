@@ -140,7 +140,7 @@ func (list *List) IsEmpty() bool {
 // AddToQueue ads either a filesystem ID or internet URL onto the Playlist queue. On success, it returns a human friendly
 // title and err is nil. On failure (ID not found or not whitelisted URL) returns empty string "" and a respective error.
 func (list *List) AddToQueue(path string) (string, error) {
-	human, path, err := getHumanAndPath(path) // Note: we check for whitelist urls here
+	human, path, err := getHumanAndPath(path) // NOTE: we check for whitelist urls here
 	if err != nil {
 		return "", err
 	} else if path == "" {
