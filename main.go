@@ -7,10 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/iotku/mumzic/database"
-
 	"github.com/iotku/mumzic/commands"
-	"github.com/iotku/mumzic/config"
+	"github.com/iotku/mumzic/database"
 	"github.com/iotku/mumzic/playback"
 	_ "github.com/mattn/go-sqlite3"
 	"layeh.com/gumble/gumble"
@@ -19,7 +17,7 @@ import (
 
 func main() {
 	var channelPlayer *playback.Player
-	var bConfig *config.Config
+	var bConfig *database.Config
 	var hostname, username string
 
 	cleanUp := func() {
@@ -31,8 +29,9 @@ func main() {
 		if channelPlayer != nil {
 			channelPlayer.Playlist.Save(bConfig.Hostname)
 		}
-		config.CloseDatabase()
-		database.Close()
+
+		database.Close(database.ConfigDB)
+		database.Close(database.MediaDB)
 	}
 
 	// Capture shutdown signal (ctrl+c)
@@ -50,7 +49,7 @@ func main() {
 		Connect: func(e *gumble.ConnectEvent) {
 			hostname = getValueFromFlag(flag.Lookup("server"))
 			username = getValueFromFlag(flag.Lookup("username"))
-			bConfig = config.NewConfig(hostname)
+			bConfig = database.NewConfig(hostname)
 			if e.Client.Channels.Find(bConfig.Channel) != nil {
 				e.Client.Self.Move(e.Client.Channels.Find(bConfig.Channel))
 			}

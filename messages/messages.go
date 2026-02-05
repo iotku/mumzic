@@ -14,7 +14,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/iotku/mumzic/config"
 	"github.com/iotku/mumzic/youtubedl"
 	"github.com/nfnt/resize"
 )
@@ -44,10 +43,10 @@ func SendMore(sender, text string) {
 
 // SaveMoreRows adds the first rows limited by config.MaxLines to the provided
 // table and then saves the additional rows into the 'more' buffer
-func SaveMoreRows(sender string, rows []string, table MessageTable) int {
+func SaveMoreRows(sender string, maxLines int, rows []string, table MessageTable) int {
 	ResetMore(sender)
 	var i int
-	for i = 0; i < config.MaxLines && i < len(rows); i++ {
+	for i = 0; i < maxLines && i < len(rows); i++ {
 		table.AddRow(strconv.Itoa(i) + ": " + rows[i])
 		SendMore(sender, strconv.Itoa(i)+": "+rows[i])
 	}
@@ -58,7 +57,7 @@ func SaveMoreRows(sender string, rows []string, table MessageTable) int {
 		extra++
 	}
 	if extra != 0 {
-		messageOffsets[sender] = config.MaxLines
+		messageOffsets[sender] = maxLines
 		table.AddRow("---")
 		table.AddRow("There are " + strconv.Itoa(extra) + " additional results.")
 		table.AddRow("Use <b>more</b> and <b>less</b> to see them.")
@@ -67,13 +66,13 @@ func SaveMoreRows(sender string, rows []string, table MessageTable) int {
 	return extra
 }
 
-func GetMore(sender string) (output []string) {
+func GetMore(sender string, maxLines int) (output []string) {
 	offset := messageOffsets[sender]
 	if offset == len(messageBuffers[sender]) {
 		return []string{"nothing more"}
 	}
 	var i int
-	for i = offset; i < offset+config.MaxLines && i < len(messageBuffers[sender]); i++ {
+	for i = offset; i < offset+maxLines && i < len(messageBuffers[sender]); i++ {
 		output = append(output, messageBuffers[sender][i])
 	}
 	if i <= len(messageBuffers[sender]) {
@@ -82,39 +81,39 @@ func GetMore(sender string) (output []string) {
 	return
 }
 
-func GetMoreTable(sender string) string {
+func GetMoreTable(sender string, maxLines int) string {
 	table := MakeTable("More Results")
-	for _, v := range GetMore(sender) {
+	for _, v := range GetMore(sender, maxLines) {
 		table.AddRow(v)
 	}
 	return table.String()
 }
 
-func GetLess(sender string) (output []string) { // TODO: Investigate offsets not always being correct
-	offset := messageOffsets[sender] - config.MaxLines
-	if offset+config.MaxLines <= 0 {
+func GetLess(sender string, maxLines int) (output []string) { // TODO: Investigate offsets not always being correct
+	offset := messageOffsets[sender] - maxLines
+	if offset+maxLines <= 0 {
 		return []string{"Nothing less"}
 	}
 
-	if offset-config.MaxLines < 0 {
+	if offset-maxLines < 0 {
 		offset = 0
 	}
 
 	var i int
-	for i = offset; i < offset+config.MaxLines && i < len(messageBuffers[sender]); i++ {
+	for i = offset; i < offset+maxLines && i < len(messageBuffers[sender]); i++ {
 		output = append(output, messageBuffers[sender][i])
 	}
-	if offset <= config.MaxLines {
+	if offset <= maxLines {
 		messageOffsets[sender] = 0
 	} else {
-		messageOffsets[sender] -= config.MaxLines
+		messageOffsets[sender] -= maxLines
 	}
 	return
 }
 
-func GetLessTable(sender string) string {
+func GetLessTable(sender string, maxLines int) string {
 	table := MakeTable("Less Results")
-	for _, v := range GetLess(sender) {
+	for _, v := range GetLess(sender, maxLines) {
 		table.AddRow(v)
 	}
 	return table.String()

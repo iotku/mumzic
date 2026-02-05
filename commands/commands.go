@@ -6,14 +6,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/iotku/mumzic/config"
+	"github.com/iotku/mumzic/database"
 	"github.com/iotku/mumzic/helper"
 	"github.com/iotku/mumzic/messages"
 	"github.com/iotku/mumzic/playback"
 	"github.com/iotku/mumzic/search"
 )
 
-func IsCommand(message string, isPrivate bool, username string, config *config.Config) bool {
+func IsCommand(message string, isPrivate bool, username string, config *database.Config) bool {
 	message = strings.TrimSpace(message)
 	return strings.HasPrefix(message, config.Prefix) || strings.HasPrefix(message, username) || isPrivate
 }
@@ -67,9 +67,9 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 		player.Config.Channel = player.Client.Self.Channel.Name
 		player.Config.Save()
 	case "more":
-		helper.MsgDispatch(player.Client, isPrivate, sender, messages.GetMoreTable(sender))
+		helper.MsgDispatch(player.Client, isPrivate, sender, messages.GetMoreTable(sender, player.Config.MaxLines))
 	case "less":
-		helper.MsgDispatch(player.Client, isPrivate, sender, messages.GetLessTable(sender))
+		helper.MsgDispatch(player.Client, isPrivate, sender, messages.GetLessTable(sender, player.Config.MaxLines))
 	case "summon":
 		joinUserChannel(player, sender)
 	case "uinfo":
@@ -126,7 +126,7 @@ func joinUserChannel(player *playback.Player, sender string) {
 	}
 }
 
-func getCommandAndArg(msg, name string, conf *config.Config) (command, arg string) {
+func getCommandAndArg(msg, name string, conf *database.Config) (command, arg string) {
 	var skipUserName = 0
 	msg = strings.TrimSpace(msg)
 	if strings.HasPrefix(msg, conf.Prefix) {
@@ -189,7 +189,7 @@ func list(player *playback.Player, sender string, isPrivate bool) {
 	playlist := player.Playlist.GetList(player.Playlist.Count())
 
 	output := messages.MakeTable("Playlist", "# Track Name")
-	messages.SaveMoreRows(sender, playlist, output)
+	messages.SaveMoreRows(sender, player.Config.MaxLines, playlist, output)
 	output.AddRow("---")
 	output.AddRow(strconv.Itoa(player.Playlist.Count()) + " Track(s) queued.")
 
@@ -200,7 +200,7 @@ func find(player *playback.Player, sender string, isPrivate bool, arg string) {
 	results := search.FindArtistTitle(arg)
 
 	output := messages.MakeTable("Search Results")
-	messages.SaveMoreRows(sender, results, output)
+	messages.SaveMoreRows(sender, player.Config.MaxLines, results, output)
 
 	helper.MsgDispatch(player.Client, isPrivate, sender, output.String())
 }
@@ -209,8 +209,8 @@ func rand(player *playback.Player, sender string, isPrivate bool, arg string) {
 	value, err := strconv.Atoi(arg)
 	if err != nil || value < 1 {
 		value = 1
-	} else if value > config.MaxLines {
-		value = config.MaxLines
+	} else if value > player.Config.MaxLines {
+		value = player.Config.MaxLines
 	}
 
 	plistOrigSize := player.Playlist.Size()

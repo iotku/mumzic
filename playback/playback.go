@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/iotku/mumzic/config"
+	"github.com/iotku/mumzic/database"
 	"github.com/iotku/mumzic/helper"
 	"github.com/iotku/mumzic/messages"
 	"github.com/iotku/mumzic/playlist"
@@ -29,7 +29,7 @@ type Player struct {
 	Playlist playlist.List
 	Volume   float32
 	IsRadio  bool
-	Config   *config.Config
+	Config   *database.Config
 
 	// Syncronization
 	mu         sync.RWMutex
@@ -94,7 +94,7 @@ func (player *Player) TargetUsers() {
 	}
 }
 
-func NewPlayer(client *gumble.Client, config *config.Config) *Player {
+func NewPlayer(client *gumble.Client, config *database.Config) *Player {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Player{
 		stream:  nil,

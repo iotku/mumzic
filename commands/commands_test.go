@@ -3,13 +3,13 @@ package commands
 import (
 	"testing"
 
-	"github.com/iotku/mumzic/config"
+	"github.com/iotku/mumzic/database"
 )
 
-var Config config.Config
+var Config database.Config
 
 func init() {
-	Config = *config.NewConfig("") // TODO: cleanup created database on disk
+	Config = *database.NewConfig("") // TODO: cleanup created database on disk
 }
 
 func TestGetCommandAndArg(t *testing.T) {

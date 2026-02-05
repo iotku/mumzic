@@ -2,31 +2,39 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
-
-	"github.com/iotku/mumzic/config"
 )
 
-var SongDB *sql.DB
+// MediaDBPath is a database generated from genMusicSQLiteDB
+var MediaDBPath = "./media.db"
+var MediaDB *sql.DB
 
 func init() {
 	var err error
-	if _, err = os.Stat(config.SongDB); os.IsNotExist(err) {
+	if _, err = os.Stat(MediaDBPath); os.IsNotExist(err) {
 		// create new database
 		return
 	}
-	SongDB, err = sql.Open("sqlite3", config.SongDB)
+	MediaDB, err = sql.Open("sqlite3", MediaDBPath)
 	checkErrPanic(err)
+}
+
+// openDB returns an opened sqlite3 database
+func openDB(DatabasePath string) *sql.DB {
+	database, err := sql.Open("sqlite3", DatabasePath)
+	checkErrPanic(err)
+	return database
 }
 
 // Query SQLite database to count maximum amount of rows, as to not point to non-existent ID
 func GetMaxID() int {
-	if _, err := os.Stat(config.SongDB); os.IsNotExist(err) {
+	if _, err := os.Stat(MediaDBPath); os.IsNotExist(err) {
 		return 0
 	}
 
 	var count int
-	checkErrPanic(SongDB.QueryRow("select max(ROWID) from music;").Scan(&count))
+	checkErrPanic(MediaDB.QueryRow("select max(ROWID) from music;").Scan(&count))
 	return count
 }
 
@@ -37,8 +45,10 @@ func checkErrPanic(err error) {
 	}
 }
 
-func Close() {
-	if SongDB != nil {
-		checkErrPanic(SongDB.Close())
+func Close(database *sql.DB) {
+	if MediaDB != nil {
+		checkErrPanic(MediaDB.Close())
+	} else {
+		fmt.Println("Tried closing nil DB")
 	}
 }

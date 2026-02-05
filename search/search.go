@@ -23,7 +23,7 @@ func GetRandomTrackIDs(amount int) (idList []int) {
 	}
 
 	var rows *sql.Rows
-	rows, err := database.SongDB.Query("SELECT ROWID from music ORDER BY random() LIMIT ?", amount)
+	rows, err := database.MediaDB.Query("SELECT ROWID from music ORDER BY random() LIMIT ?", amount)
 	checkErrPanic(err)
 	for rows.Next() {
 		var id int
@@ -41,7 +41,7 @@ func GetTrackById(trackID int) (human, path string) {
 		return "", ""
 	}
 	var artist, title, album string
-	err := database.SongDB.QueryRow("SELECT path,artist,title,album from music where ROWID = ?", trackID).Scan(&path, &artist, &title, &album)
+	err := database.MediaDB.QueryRow("SELECT path,artist,title,album from music where ROWID = ?", trackID).Scan(&path, &artist, &title, &album)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
 			return "", ""
@@ -76,12 +76,12 @@ func FindArtistTitle(Query string) []string {
 
 // Helper Functions
 func makeDbQuery(query string, args ...interface{}) *sql.Rows {
-	if database.SongDB == nil {
+	if database.MediaDB == nil {
 		log.Println("SongDB was null when making DB Query!")
 		return nil
 	}
 
-	rows, err := database.SongDB.Query(query, args...)
+	rows, err := database.MediaDB.Query(query, args...)
 	checkErrPanic(err)
 
 	// Don't forget to close in function where called.
