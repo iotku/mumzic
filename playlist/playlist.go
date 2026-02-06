@@ -62,7 +62,7 @@ func (list *List) Load(hostname string) {
 		if err != nil {
 			log.Fatalln("json Unmarshal failed", err.Error())
 		}
-		log.Println("Applying plist")
+		log.Println("Applying previous playlist file.")
 		list.Playlist = pList
 	}
 }

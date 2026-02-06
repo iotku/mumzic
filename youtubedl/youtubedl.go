@@ -22,7 +22,7 @@ var AllowedURLPrefixes []string
 var whitelistFile = "whitelist.txt"
 
 func init() {
-	err := loadAllowedURLPrefixesFromFile(whitelistFile)
+	err := LoadAllowedURLPrefixesFromFile()
 	if err != nil {
 		log.Printf("failed to load allowed URLs: %v", err)
 	}
@@ -30,9 +30,9 @@ func init() {
 	log.Printf("Allowed URL prefixes: %v", AllowedURLPrefixes)
 }
 
-// loadAllowedURLPrefixesFromFile loads prefixes from each line of a provided txt file
-func loadAllowedURLPrefixesFromFile(path string) error {
-	f, err := os.Open(path) // #nosec G304 - Internal Helper method
+// LoadAllowedURLPrefixesFromFile loads prefixes from each line of a provided txt file
+func LoadAllowedURLPrefixesFromFile() error {
+	f, err := os.Open(whitelistFile) // #nosec G304 - Internal Helper method
 	if err != nil {
 		return err
 	}
@@ -42,6 +42,7 @@ func loadAllowedURLPrefixesFromFile(path string) error {
 }
 
 func scanURLPrefixes(scanner *bufio.Scanner) error {
+	AllowedURLPrefixes = AllowedURLPrefixes[:0] // reset
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || strings.HasPrefix(line, "#") { // Ignore # comments
@@ -53,8 +54,8 @@ func scanURLPrefixes(scanner *bufio.Scanner) error {
 			continue
 		}
 
-		if !strings.HasSuffix(line, "/") {
-			line += "/" // enforce trailing / to avoid subdomain bypass
+		if !strings.HasSuffix(line, "/") { // We're not enforcing this, but this is a good idea.
+			log.Println("[WARN] " + whitelistFile + ": " + line + " does not end with trailing / This may allow yt-dl URL bypasses.")
 		}
 
 		AllowedURLPrefixes = append(AllowedURLPrefixes, line)
