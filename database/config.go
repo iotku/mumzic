@@ -13,7 +13,7 @@ type Config struct {
 	Prefix   string  // Prefix for commands in channel chat
 	Channel  string  // Channel the bot is occupying or last occupied
 	Hostname string  // Hostname of connected server
-	MaxLines int     // Most lins you want to output to the screen before more/less
+	MaxLines int     // Most lines you want to output to the screen before more/less
 }
 
 // Path to configuration db
@@ -35,6 +35,7 @@ func NewConfig(hostname string) *Config {
 		Prefix:   "!",
 		Channel:  "",
 		Hostname: hostname,
+		MaxLines: 5,
 	}
 
 	var config Config
