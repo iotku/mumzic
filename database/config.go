@@ -40,14 +40,14 @@ func NewConfig(hostname string) *Config {
 
 	var config Config
 	row := ConfigDB.QueryRow("SELECT * FROM config WHERE Hostname = ?", hostname)
-	err := row.Scan(&config.Hostname, &config.Volume, &config.Channel, &config.Prefix, &MediaDBPath)
+	err := row.Scan(&config.Hostname, &config.Volume, &config.Channel, &config.Prefix, &config.MaxLines, &MediaDBPath)
 	if err != nil && err == sql.ErrNoRows { // create new configuration
 		tx, _ := ConfigDB.Begin()
 		writeConfigToDB(defaultConfig, prepareStatementInsert(tx))
 		checkErrPanic(tx.Commit())
 		return &defaultConfig
 	} else if err != nil {
-		panic("NewConfig failed")
+		panic("NewConfig failed: " + err.Error())
 	}
 
 	return &config
@@ -65,13 +65,13 @@ func (config *Config) Save() {
 		checkErrPanic(stmt.Close())
 	}()
 	// There must be a better way to do this, but I'm tired and this will do for now.
-	_, err = stmt.Exec(config.Volume, config.Channel, config.Prefix, config.Hostname, config.MaxLines)
+	_, err = stmt.Exec(config.Volume, config.Channel, config.Prefix, config.MaxLines, config.Hostname)
 	checkErrPanic(err)
 	checkErrPanic(tx.Commit())
 }
 
 func prepareUpdate(tx *sql.Tx) *sql.Stmt {
-	stmt, err := tx.Prepare(`UPDATE config SET VolumeLevel = ?, LastChannel = ?, CmdPrefix = ? WHERE Hostname = ?;`)
+	stmt, err := tx.Prepare(`UPDATE config SET VolumeLevel = ?, LastChannel = ?, CmdPrefix = ?, MaxLines = ? WHERE Hostname = ?;`)
 	if err != nil {
 		log.Fatal(err)
 	}
