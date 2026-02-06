@@ -27,6 +27,15 @@ func init() {
 	}
 
 	ConfigDB = openDB(configDBPath)
+	migrateConfigDB()
+}
+
+// Old database schemas didn't have the MaxLines column, so add one.
+func migrateConfigDB() {
+	_, err := ConfigDB.Exec(`ALTER TABLE config ADD COLUMN MaxLines INTEGER DEFAULT 5`)
+	if err == nil {
+		log.Println("Config Migration: Added MaxLines column to config.")
+	} // if fails we assume the column already existed
 }
 
 func NewConfig(hostname string) *Config {
@@ -39,8 +48,8 @@ func NewConfig(hostname string) *Config {
 	}
 
 	var config Config
-	row := ConfigDB.QueryRow("SELECT * FROM config WHERE Hostname = ?", hostname)
-	err := row.Scan(&config.Hostname, &config.Volume, &config.Channel, &config.Prefix, &config.MaxLines, &MediaDBPath)
+	row := ConfigDB.QueryRow("SELECT Hostname, VolumeLevel, LastChannel, CmdPrefix, SongDB, Maxlines FROM config WHERE Hostname = ?", hostname)
+	err := row.Scan(&config.Hostname, &config.Volume, &config.Channel, &config.Prefix, &MediaDBPath, &config.MaxLines)
 	if err != nil && err == sql.ErrNoRows { // create new configuration
 		tx, _ := ConfigDB.Begin()
 		writeConfigToDB(defaultConfig, prepareStatementInsert(tx))
