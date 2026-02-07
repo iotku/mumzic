@@ -101,3 +101,9 @@ func DebugPrintln(inter ...interface{}) {
 		log.Println(inter...)
 	}
 }
+
+func LogErr(err error, why string) {
+	if err != nil {
+		log.Println("[error] " + why + ": " + err.Error())
+	}
+}

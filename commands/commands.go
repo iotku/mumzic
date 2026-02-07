@@ -68,7 +68,7 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 		player.Config.Channel = player.Client.Self.Channel.Name
 		player.Config.Save()
 	case "reload":
-		youtubedl.LoadAllowedURLPrefixesFromFile()
+		helper.LogErr(youtubedl.LoadAllowedURLPrefixesFromFile(), "YTDL Reload")
 	case "more":
 		helper.MsgDispatch(player.Client, isPrivate, sender, messages.GetMoreTable(sender, player.Config.MaxLines))
 	case "less":
