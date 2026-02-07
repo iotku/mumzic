@@ -26,8 +26,6 @@ func init() {
 	if err != nil {
 		log.Printf("failed to load allowed URLs: %v", err)
 	}
-
-	log.Printf("Allowed URL prefixes: %v", AllowedURLPrefixes)
 }
 
 // LoadAllowedURLPrefixesFromFile loads prefixes from each line of a provided txt file
@@ -62,6 +60,7 @@ func scanURLPrefixes(scanner *bufio.Scanner) error {
 
 	}
 
+	log.Printf("Allowed URL prefixes: %v", AllowedURLPrefixes)
 	return scanner.Err()
 }
 
