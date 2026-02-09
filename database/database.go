@@ -46,8 +46,8 @@ func checkErrPanic(err error) {
 }
 
 func Close(database *sql.DB) {
-	if MediaDB != nil {
-		checkErrPanic(MediaDB.Close())
+	if database != nil {
+		checkErrPanic(database.Close())
 	} else {
 		fmt.Println("Tried closing nil DB")
 	}
