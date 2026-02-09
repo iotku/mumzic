@@ -31,7 +31,9 @@ func main() {
 		}
 
 		database.Close(database.ConfigDB)
-		database.Close(database.MediaDB)
+		if database.MediaDB != nil {
+			database.Close(database.MediaDB)
+		}
 	}
 
 	// Capture shutdown signal (ctrl+c)
