@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-//go:embed whitelist-example.txt
+//go:embed whitelist-test.txt
 var whitelistExample string
 
 func TestIsWhiteListedUrl(t *testing.T) {
