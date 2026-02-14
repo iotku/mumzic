@@ -96,7 +96,7 @@ func prepareStatementInsert(tx *sql.Tx) *sql.Stmt {
 }
 
 func writeConfigToDB(config Config, stmt *sql.Stmt) {
-	_, err := stmt.Exec(config.Hostname, config.Volume, config.Channel, config.Prefix, config.MaxLines, MediaDBPath)
+	_, err := stmt.Exec(config.Hostname, config.Volume, config.Channel, config.Prefix, MediaDBPath, config.MaxLines)
 	if err != nil {
 		log.Fatalln("Writing Config Failed!:", err.Error())
 	}
