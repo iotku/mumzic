@@ -83,7 +83,8 @@ func SearchYouTube(query string) (string, error) {
 	if !IsWhiteListedURL("https://www.youtube.com/") {
 		return "", errors.New("YouTube is not whitelisted")
 	}
-	ytDL := exec.Command("yt-dlp", "--no-playlist", "--get-id", "--default-search", "ytsearch1", query)
+	// #nosec G204 '--' hopefully prevents argument injection
+	ytDL := exec.Command("yt-dlp", "--no-playlist", "--get-id", "--default-search", "ytsearch1", "--", query)
 	var output bytes.Buffer
 	ytDL.Stdout = &output
 	err := ytDL.Run()
@@ -101,7 +102,8 @@ func SearchYouTube(query string) (string, error) {
 }
 
 func GetYtDLTitle(url string) (string, error) {
-	ytDL := exec.Command("yt-dlp", "--no-playlist", "-e", url)
+	// #nosec G204 -- URL is strictly validated and '--' prevents argument injection
+	ytDL := exec.Command("yt-dlp", "--no-playlist", "-e", "--", url)
 	var output bytes.Buffer
 	ytDL.Stdout = &output
 	err := ytDL.Run()
@@ -112,13 +114,14 @@ func GetYtDLTitle(url string) (string, error) {
 }
 
 func GetYtDLSource(url string) gumbleffmpeg.Source {
-	return gumbleffmpeg.SourceExec("yt-dlp", "--no-playlist", "-f", "bestaudio", "--rm-cache-dir", "-q", "-o", "-", url)
+	return gumbleffmpeg.SourceExec("yt-dlp", "--no-playlist", "-f", "bestaudio", "--rm-cache-dir", "-q", "-o", "-", "--", url)
 }
 
 // GetYtDLThumbnail fetches the thumbnail for a YouTube video and returns it as base64-encoded data
 func GetYtDLThumbnail(url string) (image.Image, error) {
 	// get the thumbnail URL using yt-dlp
-	ytDL := exec.Command("yt-dlp", "--no-playlist", "--get-thumbnail", url)
+	// #nosec G204 -- URL is strictly validated and '--' prevents argument injection
+	ytDL := exec.Command("yt-dlp", "--no-playlist", "--get-thumbnail", "--", url)
 	var output bytes.Buffer
 	ytDL.Stdout = &output
 	err := ytDL.Run()
