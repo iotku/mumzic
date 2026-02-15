@@ -180,7 +180,7 @@ func (list *List) AddNext(arg string) error {
 }
 
 func getHumanAndPath(arg string) (human, path string, err error) {
-	path = helper.StripHTMLTags(arg)
+	path = helper.StripHTMLTags(arg) // TODO: Might be redundant now that we Strip message beforehand
 	if strings.HasPrefix(path, "http") && youtubedl.IsWhiteListedURL(path) == true {
 		human, err = youtubedl.GetYtDLTitle(path)
 		return

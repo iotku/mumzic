@@ -9,6 +9,7 @@ import (
 
 	"github.com/iotku/mumzic/commands"
 	"github.com/iotku/mumzic/database"
+	"github.com/iotku/mumzic/helper"
 	"github.com/iotku/mumzic/playback"
 	_ "github.com/mattn/go-sqlite3"
 	"layeh.com/gumble/gumble"
@@ -68,8 +69,11 @@ func main() {
 			isPrivate := len(e.TextMessage.Channels) == 0 // If no channels, is private message
 			logMessage(e, isPrivate)
 
-			if commands.IsCommand(e.Message, isPrivate, username, bConfig) {
-				go commands.CommandDispatch(channelPlayer, e.Message, isPrivate, e.Sender.Name)
+			strippedMessage := helper.StripHTMLTags(e.Message)
+			if commands.IsCommand(strippedMessage, isPrivate, username, bConfig) {
+				go func() {
+					commands.CommandDispatch(channelPlayer, strippedMessage, isPrivate, e.Sender.Name)
+				}()
 			}
 		},
 		ChannelChange: func(e *gumble.ChannelChangeEvent) {
