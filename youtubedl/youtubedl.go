@@ -48,12 +48,12 @@ func scanURLPrefixes(scanner *bufio.Scanner) error {
 		}
 
 		if !strings.HasPrefix(line, "http://") && !strings.HasPrefix(line, "https://") {
-			log.Println("Invalid entry (" + line + ") must start with http:// or https:// ")
+			log.Println("Invalid entry (" + line + ") must start with http:// or https:// ") // #nosec G706
 			continue
 		}
 
 		if !strings.HasSuffix(line, "/") { // We're not enforcing this, but this is a good idea.
-			log.Println("[WARN] " + whitelistFile + ": " + line + " does not end with trailing / This may allow yt-dl URL bypasses.")
+			log.Println("[WARN] " + whitelistFile + ": " + line + " does not end with trailing / This may allow yt-dl URL bypasses.") // #nosec G706
 		}
 
 		AllowedURLPrefixes = append(AllowedURLPrefixes, line)
