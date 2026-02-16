@@ -172,9 +172,8 @@ func FindCoverArtPath(playPath string) string {
 //	imposes by default for text messages (that contain no image)
 //
 // TODO: Option to override limits for servers with modified settings
-func GenerateCoverArtImg(image image.Image) string {
+func GenerateCoverArtImg(image image.Image, maxBytes int) string {
 	resizedImg := resize.Resize(0, 100, image, resize.MitchellNetravali)
-	const textReserved = 200 // Leave some space for text for the message
 	const minQual = 30
 	const maxQual = 80
 
@@ -190,7 +189,7 @@ func GenerateCoverArtImg(image image.Image) string {
 		}
 		encodedStr := "<img src=\"data:img/jpeg;base64, " + base64.StdEncoding.EncodeToString(buf.Bytes()) + "\" />"
 
-		if len(encodedStr) <= MaxMessageLengthWithoutImage-textReserved {
+		if len(encodedStr) <= maxBytes {
 			best = encodedStr
 			low = mid + 1
 		} else {
@@ -198,7 +197,8 @@ func GenerateCoverArtImg(image image.Image) string {
 		}
 	}
 
-	if len(best) > MaxMessageLengthWithoutImage-textReserved {
+	if len(best) > maxBytes {
+		log.Println("[WARN] Generated album art was too big!")
 		return "" // Don't return album art, it's certainly too big!
 	}
 
@@ -232,28 +232,8 @@ func DecodeImage(path string) (image.Image, error) {
 }
 
 func NowPlaying(path, human string, isRadioMode bool, count int) string {
-	var artImg string
-	var img image.Image
-	var err error
-	if strings.HasPrefix(path, "http") { // ytdlp thumbnail
-		img, err = youtubedl.GetYtDLThumbnail(path)
-	} else { // Local files
-		img, err = DecodeImage(FindCoverArtPath(path))
-	}
-
-	if img != nil {
-		artImg = GenerateCoverArtImg(img)
-	}
-
-	if err != nil {
-		log.Println("Could not generate thumbnail: " + err.Error())
-	}
-
+	header := "<h2><u>Now Playing</u></h2><table><tr><td>"
 	var b strings.Builder
-	b.Grow(MaxMessageLengthWithoutImage)
-
-	b.WriteString(`<h2><u>Now Playing</u></h2><table><tr><td>`)
-	b.WriteString(artImg)
 	b.WriteString(`</td><td><table><tr><td>`)
 	b.WriteString(human)
 	b.WriteString(`</td></tr>`)
@@ -263,8 +243,26 @@ func NowPlaying(path, human string, isRadioMode bool, count int) string {
 	} else {
 		fmt.Fprintf(&b, `<tr><td><b>%d</b> songs queued</td></tr>`, count)
 	}
-
 	b.WriteString(`</table></td></tr></table>`)
 
-	return b.String()
+	// Generate Art Image in remaining space
+	var artImg string
+	var img image.Image
+	var err error
+
+	if strings.HasPrefix(path, "http") { // ytdlp thumbnail
+		img, err = youtubedl.GetYtDLThumbnail(path)
+	} else { // Local files
+		img, err = DecodeImage(FindCoverArtPath(path))
+	}
+
+	if img != nil {
+		artImg = GenerateCoverArtImg(img, MaxMessageLengthWithoutImage-b.Len())
+	}
+
+	if err != nil {
+		log.Println("Could not generate thumbnail: " + err.Error())
+	}
+
+	return header + artImg + b.String()
 }
