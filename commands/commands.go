@@ -39,12 +39,7 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 	case "stop":
 		player.Stop(true)
 	case "skip", "next":
-		value, err := strconv.Atoi(arg)
-		if err != nil {
-			player.Skip(1)
-		} else {
-			player.Skip(value)
-		}
+		skip(player, sender, isPrivate, arg)
 	case "vol", "volume":
 		vol(player, sender, isPrivate, arg)
 	case "list":
@@ -80,24 +75,25 @@ func CommandDispatch(player *playback.Player, msg string, isPrivate bool, sender
 	}
 }
 
-func playNow(player *playback.Player, sender string, isPrivate bool, track string) {
-	if player.IsRadio && player.IsPlaying() {
-		toggleRadio(player, sender, isPrivate)
+func skip(player *playback.Player, sender string, isPrivate bool, arg string) {
+	if player.IsRadio {
+		playNow(player, sender, isPrivate, strconv.Itoa(search.GetRandomTrackIDs(1)[0]))
+		return
 	}
 
-	player.Stop(true)
-	err := player.Playlist.AddNext(track)
+	value, err := strconv.Atoi(arg)
+	if err != nil {
+		player.Skip(1)
+	} else {
+		player.Skip(value)
+	}
+}
+
+func playNow(player *playback.Player, sender string, isPrivate bool, track string) {
+	err := player.PlayNow(track)
 	if err != nil {
 		helper.MsgDispatch(player.Client, isPrivate, sender, "Not Added: "+err.Error())
 		return
-	}
-	if player.IsStopped() {
-		if !player.Playlist.HasNext() {
-			player.PlayCurrent()
-		} else {
-			player.Playlist.Skip(1)
-			player.PlayCurrent()
-		}
 	}
 }
 

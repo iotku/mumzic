@@ -209,6 +209,21 @@ func (player *Player) Play(path string) {
 	go player.WaitForStop()
 }
 
+func (player *Player) PlayNow(track string) error {
+	player.Stop(true)
+	err := player.Playlist.AddNext(track)
+	if player.IsStopped() && err == nil {
+		if !player.Playlist.HasNext() {
+			player.PlayCurrent()
+		} else {
+			player.Playlist.Skip(1)
+			player.PlayCurrent()
+		}
+	}
+
+	return err
+}
+
 func (player *Player) NowPlaying() string {
 	currentPath := player.Playlist.GetCurrentPath()
 	currentHuman := player.Playlist.GetCurrentHuman()
