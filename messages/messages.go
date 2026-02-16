@@ -257,7 +257,7 @@ func NowPlaying(path, human string, isRadioMode bool, count int) string {
 	}
 
 	if img != nil {
-		artImg = GenerateCoverArtImg(img, MaxMessageLengthWithoutImage-b.Len())
+		artImg = GenerateCoverArtImg(img, MaxMessageLengthWithoutImage-len(header)-b.Len())
 	}
 
 	if err != nil {
