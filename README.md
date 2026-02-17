@@ -14,7 +14,7 @@ Mumble Client 1.4.x or higher required:
 Enable Headphones checkbox in Mumble Client Audio Output settings. 
 
 > [!NOTE]
-> For stereo audio to work see the building instructions above which should *hopefully* pull in my modified gumble with stereo output.
+> For stereo audio to work use Docker Compose or take note of the [Build Instructions](#building).
 
 ## Getting Started
 
