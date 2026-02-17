@@ -87,7 +87,7 @@ brew install pkg-config opus opusfile
 </details>
 
 <details>
-<summary>MacOS</summary>
+<summary>MacOS (Homebrew)</summary>
 
 ```sh
 brew install pkg-config opus opusfile
@@ -111,7 +111,7 @@ You can `go build` which should pull in my modified gumble which has stereo supp
 ## Running
 
 ```bash
-./mumzic -insecure -server [hostname or ip]`
+./mumzic -insecure -server [hostname or ip]
 ```
 
 For additional options (such as setting the **username** or **password**), see `mumzic -help`

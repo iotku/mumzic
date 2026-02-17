@@ -11,8 +11,9 @@ Note: PMing the bot currently doesn't have the prefix for commands, so **!summon
 ### Playback
 | Command                      | Info                                               | Notes                                                                 |
 |------------------------------|----------------------------------------------------|-----------------------------------------------------------------------|
-| play/add [ID or URL]         | Play track via ID or URL                           | Numeric IDs (found with !search) or Youtube/Soundcloud URL           |
+| play/add [ID or URL]         | Play track via ID or URL                           | Numeric IDs (found with !search) or Youtube/Soundcloud URL            |
 | random/rand [#]              | Add Random Tracks                                  | Random track(s) from filesystem                                       |
+| radio                        | Starts/Stops "Radio Mode"                          | Shuffles through local media files continously                        |
 | stop                         | Stop playing track                                 | If you use !play with no arguments; will restart track from beginning |
 | skip/next [#]                | skip # amount of tracks                            | Default 1                                                             |
 | playnow  [ID or URL]         | Play provided ID or URL immediately                |                                                                       |
