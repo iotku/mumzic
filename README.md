@@ -59,7 +59,7 @@ We now require opus development headers to build with https://github.com/hraban/
 
 
 <details>
-<summary>Ubuntu (Debian / Apt Based Distros)</summary>
+<summary>Ubuntu (Debian / Apt)</summary>
 
 ```sh
 sudo apt-get install pkg-config libopus-dev libopusfile-dev
@@ -77,7 +77,7 @@ sudo dnf install opus-devel opusfile-devel pkgconfig
 </details>
 
 <details>
-<summary>Bazzite (Universal Blue / Universal Blue)</summary>
+<summary>Bazzite (Universal Blue / Homebrew (linuxbrew))</summary>
 
 ```sh
 export PKG_CONFIG_PATH=$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH
@@ -100,7 +100,7 @@ Windows: Consider using Docker or WSL Ubuntu.
 Until I can figure out modifying modules properly
 
 ```bash
-git clone https://github.com/iotku/mumzic/`
+git clone https://github.com/iotku/mumzic/
 ```
 
 You can `go build` which should pull in my modified gumble which has stereo support
