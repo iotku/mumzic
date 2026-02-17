@@ -8,3 +8,4 @@ gendb/gendb
 playlists/
 whitelist.txt
 .env
+config.db.old
