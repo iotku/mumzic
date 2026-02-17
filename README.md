@@ -8,6 +8,7 @@ See [usage.md](https://github.com/iotku/mumzic/blob/master/USAGE.md)
 
 ## Stereo Audio
 Mumble Client 1.4.x or higher required:
+
 ![Headphones checkbox in Positional audio must be checked!](doc/headphones-option.png)
 
 Enable Headphones checkbox in Mumble Client Audio Output settings. 
