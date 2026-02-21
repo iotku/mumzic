@@ -247,7 +247,7 @@ func NowPlaying(path, human string, isRadioMode bool, count int) string {
 	b.WriteString(`</a></td></tr>`)
 
 	if isRadioMode {
-		b.WriteString(`<tr><td><b>Radio</b> Mode: <b>Enabled</b></td></tr><tr>`)
+		b.WriteString(`<tr><td><b>Radio</b> Mode: <b>Enabled</b></td></tr>`)
 	} else {
 		fmt.Fprintf(&b, `<tr><td><b>%d</b> songs queued</td></tr>`, count)
 	}
