@@ -5,10 +5,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"html"
 	"image"
 	"image/jpeg"
 	_ "image/png"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -234,9 +236,15 @@ func DecodeImage(path string) (image.Image, error) {
 func NowPlaying(path, human string, isRadioMode bool, count int) string {
 	header := "<h2><u>Now Playing</u></h2><table><tr><td>"
 	var b strings.Builder
-	b.WriteString(`</td><td><table><tr><td>`)
-	b.WriteString(human)
-	b.WriteString(`</td></tr>`)
+	b.WriteString(`</td><td><table><tr><td><a href="`)
+	if strings.HasPrefix(path, "http") {
+		b.WriteString(html.EscapeString(path))
+	} else {
+		b.WriteString(html.EscapeString("https://youtube.com/search?q=" + url.QueryEscape(human)))
+	}
+	b.WriteString(`">`)
+	b.WriteString(html.EscapeString(human))
+	b.WriteString(`</a></td></tr>`)
 
 	if isRadioMode {
 		b.WriteString(`<tr><td><b>Radio</b> Mode: <b>Enabled</b></td></tr><tr>`)
