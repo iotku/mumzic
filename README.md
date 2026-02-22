@@ -46,7 +46,7 @@ docker compose up --build
 ## Development
 ### Dependencies
 
-Base Reqirements: go / ffmpeg / yt-dlp / sqlite3 
+Base Reqirements: go (>=1.20) / ffmpeg / yt-dlp / sqlite3 
 
 Development Headers: opus / opusfile
 
