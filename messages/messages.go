@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dhowden/tag"
 	"github.com/iotku/mumzic/youtubedl"
 	"github.com/nfnt/resize"
 )
@@ -288,7 +289,10 @@ func NowPlaying(path, human string, isRadioMode bool, count int) string {
 	if strings.HasPrefix(path, "http") { // ytdlp thumbnail
 		img, err = youtubedl.GetYtDLThumbnail(path)
 	} else { // Local files
-		img, err = DecodeImage(FindCoverArtPath(path))
+		img, err = GetEmbdedImage(path) // Get embeded image
+		if err != nil {                 // Try looking for file
+			img, err = DecodeImage(FindCoverArtPath(path))
+		}
 	}
 
 	if img != nil {
@@ -300,4 +304,28 @@ func NowPlaying(path, human string, isRadioMode bool, count int) string {
 	}
 
 	return header + artImg + b.String()
+}
+
+func GetEmbdedImage(path string) (image.Image, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, errors.New("GetEmbdedImage: could not open path " + path)
+	}
+	defer f.Close()
+	metadata, err := tag.ReadFrom(f)
+	if err != nil {
+		return nil, errors.New("GetEmbdedImage: could not read metadata")
+	}
+
+	pic := metadata.Picture()
+	if pic == nil {
+		return nil, errors.New("GetEmbdedImage: no image found in metadata")
+	}
+
+	// Convert bytes to an image.Image
+	img, _, err := image.Decode(bytes.NewReader(pic.Data))
+	if err != nil {
+		return nil, err
+	}
+	return img, nil
 }

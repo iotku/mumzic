@@ -1,4 +1,8 @@
 github.com/dchote/go-openal v0.0.0-20171116030048-f4a9a141d372/go.mod h1:74z+CYu2/mx4N+mcIS/rsvfAxBPBV9uv8zRAnwyFkdI=
+github.com/dhowden/itl v0.0.0-20170329215456-9fbe21093131/go.mod h1:eVWQJVQ67aMvYhpkDwaH2Goy2vo6v8JCMfGXfQ9sPtw=
+github.com/dhowden/plist v0.0.0-20141002110153-5db6e0d9931a/go.mod h1:sLjdR6uwx3L6/Py8F+QgAfeiuY87xuYGwCDqRFrvCzw=
+github.com/dhowden/tag v0.0.0-20240417053706-3d75831295e8 h1:OtSeLS5y0Uy01jaKK4mA/WVIYtpzVm63vLVAPzJXigg=
+github.com/dhowden/tag v0.0.0-20240417053706-3d75831295e8/go.mod h1:apkPC/CR3s48O2D7Y++n1XWEpgPNNCjXYga3PPbJe2E=
 github.com/golang/protobuf v1.3.1 h1:YF8+flBXS5eO826T4nzqPrxfhQThhXl0YzfuUPu4SBg=
 github.com/golang/protobuf v1.3.1/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/iotku/gumble v0.0.2 h1:BDhzbEL85JaxoIUIw2mdIkRY7XE37d8H8LVhm92nxh8=
