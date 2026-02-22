@@ -157,13 +157,40 @@ func (msgTbl MessageTable) String() string {
 
 func FindCoverArtPath(playPath string) string {
 	basedir := filepath.Dir(playPath)
-	// TODO: robust matching
-	if _, err := os.Stat(basedir + "/cover.jpg"); err == nil {
-		return basedir + "/cover.jpg"
+	paths, err := os.ReadDir(basedir)
+	if err != nil {
+		return ""
 	}
-	if _, err := os.Stat(basedir + "/cover.png"); err == nil {
-		return basedir + "/cover.png"
+
+	// Try to find cover/folder.{png,jpg}
+	for _, path := range paths {
+		if path.IsDir() {
+			continue
+		}
+
+		name := strings.ToLower(path.Name())
+		if (strings.Contains(name, "cover") || strings.Contains(name, "folder")) &&
+			strings.HasSuffix(name, ".jpg") || strings.HasSuffix(name, ".jpeg") ||
+			strings.HasSuffix(name, ".png") {
+			return filepath.Join(basedir, path.Name())
+		}
+
 	}
+
+	// just get the first image
+	for _, path := range paths {
+		if path.IsDir() {
+			continue
+		}
+
+		name := strings.ToLower(path.Name())
+		if strings.HasSuffix(name, ".jpg") || strings.HasSuffix(name, ".jpeg") ||
+			strings.HasSuffix(name, ".png") {
+
+			return filepath.Join(basedir, path.Name())
+		}
+	}
+
 	return ""
 }
 
