@@ -235,8 +235,8 @@ func GenerateCoverArtImg(image image.Image, maxBytes int) string {
 	return best
 }
 
-func DecodeImage(path string) (image.Image, error) {
-	if path == "" {
+func DecodeImage(filePath string) (image.Image, error) {
+	if filePath == "" {
 		return nil, errors.New("No path specified.")
 	}
 
@@ -244,17 +244,17 @@ func DecodeImage(path string) (image.Image, error) {
 	// This /should/ not change, but extra contingencies may be necessary if we start getting images from external sources
 	// which could potentially have troublesome arbitrary filenames
 	//#nosec G304
-	f, err := os.Open(path)
+	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	img, _, err := image.Decode(f)
+	img, _, err := image.Decode(file)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := f.Close(); err != nil {
+	if err := file.Close(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -306,13 +306,17 @@ func NowPlaying(path, human string, isRadioMode bool, count int) string {
 	return header + artImg + b.String()
 }
 
-func GetEmbdedImage(path string) (image.Image, error) {
-	f, err := os.Open(path)
+// GetEmbdedImage decodes an embeded image from a media file as an image.Image
+func GetEmbdedImage(filePath string) (image.Image, error) {
+    //#nosec G304 - We trust that the mediadb is a secure source of file paths
+	//              However, if we were to get filePath from a user controlled
+	//              source this expectation may not hold.
+	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, errors.New("GetEmbdedImage: could not open path " + path)
+		return nil, errors.New("GetEmbdedImage: could not open path " + filePath)
 	}
-	defer f.Close()
-	metadata, err := tag.ReadFrom(f)
+	defer file.Close()
+	metadata, err := tag.ReadFrom(file)
 	if err != nil {
 		return nil, errors.New("GetEmbdedImage: could not read metadata")
 	}
